@@ -2,6 +2,8 @@
 // Photos + metadata live in an Epicollect5 project; marker analysis is computed
 // client-side and cached in the browser. No values are AI-invented.
 
+import type { ContaminationResult } from './lib/contamination';
+
 export interface Pt { x: number; y: number; }
 
 export type MarkerCorners = [Pt, Pt, Pt, Pt];
@@ -47,6 +49,7 @@ export interface Ec5Entry {
   species: string | null;    // best-effort, from a field named like "species"
   gps: { lat: number; lng: number } | null;
   marker: MarkerAnalysis | null; // hydrated from local cache
+  contamination?: ContaminationResult | null; // hydrated from local cache
   cloud?: { owner: string; path: string }; // present on shared cloud uploads (for owner delete)
 }
 

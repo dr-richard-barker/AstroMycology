@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Database as DbIcon, CheckCircle2, Images, ImageIcon, Loader2, ChevronDown, FileText, LineChart, Crosshair, PlayCircle, Film, Box, Thermometer } from 'lucide-react';
+import { Database as DbIcon, CheckCircle2, Images, ImageIcon, Loader2, ChevronDown, FileText, LineChart, Crosshair, PlayCircle, Film, Box, Thermometer, Biohazard } from 'lucide-react';
 import type { Ec5Entry, MarkerAnalysis } from '../types';
 import { MarkerInspector } from './MarkerInspector';
 import { SmartImg } from './SmartImg';
-import { projectName, saveMarker } from '../api/epicollect';
+import { projectName, saveMarker, saveContamination } from '../api/epicollect';
 import { allResults } from '../lib/cose-results';
 import { urlToImageData } from '../lib/capture';
 import { analyzeMarker } from '../lib/detect';
+import { analyzeContamination, type ContaminationResult } from '../lib/contamination';
 
 interface Props {
   entries: Ec5Entry[];
@@ -16,6 +17,7 @@ interface Props {
   showProject: boolean;
   onLoadMore: () => void;
   onMarkerChanged: (uuid: string, marker: MarkerAnalysis | null) => void;
+  onContaminationChanged: (uuid: string, contamination: ContaminationResult | null) => void;
   onOpenTool: (id: string, imageUrl: string, ref: string) => void;
   onHideImage?: (e: Ec5Entry) => void;   // admin-only: exclude an image
   currentUserId?: string;                // signed-in user (for owner delete)
@@ -33,7 +35,7 @@ const genoOf = (e: Ec5Entry): string =>
 const treatOf = (e: Ec5Entry): string =>
   e.fields.find(f => /^(treatment|growth condition|dose)$/i.test(f.name.trim()))?.value.trim() || '';
 
-export const Database: React.FC<Props> = ({ entries, query, loading, hasNext, showProject, onLoadMore, onMarkerChanged, onOpenTool, onHideImage, currentUserId, onDeleteUpload }) => {
+export const Database: React.FC<Props> = ({ entries, query, loading, hasNext, showProject, onLoadMore, onMarkerChanged, onContaminationChanged, onOpenTool, onHideImage, currentUserId, onDeleteUpload }) => {
   const [filter, setFilter] = useState<Filter>('all');
   const [disabled, setDisabled] = useState<Set<string>>(new Set()); // projects toggled off
   const [disabledGeno, setDisabledGeno] = useState<Set<string>>(new Set()); // genotypes toggled off
@@ -67,6 +69,32 @@ export const Database: React.FC<Props> = ({ entries, query, loading, hasNext, sh
     };
     await Promise.all([worker(), worker(), worker()]); // 3 concurrent
     if (aliveRef.current) setDerive(null);
+  };
+
+  // Batch contamination screening: same pattern as marker derivation, over
+  // photo entries that haven't been checked (or manually corrected) yet.
+  const [contamProgress, setContamProgress] = useState<{ done: number; total: number } | null>(null);
+  const pendingContam = useMemo(() => entries.filter(e => e.photoUrl && e.mediaKind !== 'thermal' && !e.contamination), [entries]);
+  const runContamBatch = async () => {
+    if (!pendingContam.length || contamProgress) return;
+    aliveRef.current = true;
+    const queue = [...pendingContam];
+    setContamProgress({ done: 0, total: queue.length });
+    let done = 0, idx = 0;
+    const worker = async () => {
+      while (idx < queue.length && aliveRef.current) {
+        const e = queue[idx++];
+        try {
+          const result = analyzeContamination(await urlToImageData(e.photoUrl!));
+          if (!aliveRef.current) return;
+          saveContamination(e.project, e.uuid, result);
+          onContaminationChanged(e.uuid, result);
+        } catch { /* skip unreadable image */ }
+        setContamProgress({ done: ++done, total: queue.length });
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    if (aliveRef.current) setContamProgress(null);
   };
 
   // Which images have tool results (ref -> count), from the shared store.
@@ -134,6 +162,13 @@ export const Database: React.FC<Props> = ({ entries, query, loading, hasNext, sh
           ) : pending.length > 0 ? (
             <button className="btn btn-sm" onClick={runDerive} title="Auto-detect the calibration marker in every loaded photo (derives the marker-present badge)">
               <Crosshair size={14} /> Detect markers ({pending.length})
+            </button>
+          ) : null}
+          {contamProgress ? (
+            <span className="row muted" style={{ gap: 6, fontSize: '.82rem' }}><Loader2 className="spin" size={14} /> Screening {contamProgress.done}/{contamProgress.total}…</span>
+          ) : pendingContam.length > 0 ? (
+            <button className="btn btn-sm btn-ghost" onClick={runContamBatch} title="Colour-heuristic screen for likely contamination across every loaded photo">
+              <Biohazard size={14} /> Check contamination ({pendingContam.length})
             </button>
           ) : null}
           <span className="muted" style={{ fontSize: '.82rem' }}>{filtered.length} shown</span>
@@ -246,6 +281,13 @@ export const Database: React.FC<Props> = ({ entries, query, loading, hasNext, sh
                       </div>
                     ) : null}
                     {e.marker?.markerFound && e.marker.pxPerMm ? <div className="scale-badge">{e.marker.pxPerMm.toFixed(1)} px/mm</div> : null}
+                    {e.contamination && e.contamination.verdict !== 'clean' && e.contamination.verdict !== 'inconclusive' ? (
+                      <div style={{ position: 'absolute', bottom: 7, left: 7 }}>
+                        <span className="badge" style={{ background: 'color-mix(in srgb, var(--danger) 20%, transparent)', color: 'var(--danger)' }} title={`Colour-heuristic screen: ${e.contamination.verdict}`}>
+                          <Biohazard size={11} /> {e.contamination.verdict}
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
                   <div className="meta">
                     <h4>{e.title}</h4>
@@ -258,7 +300,7 @@ export const Database: React.FC<Props> = ({ entries, query, loading, hasNext, sh
 
             {selected && (
               <div style={{ position: 'sticky', top: 74 }}>
-                <MarkerInspector entry={selected} onMarkerChanged={onMarkerChanged} onOpenTool={onOpenTool}
+                <MarkerInspector entry={selected} onMarkerChanged={onMarkerChanged} onContaminationChanged={onContaminationChanged} onOpenTool={onOpenTool}
                   onHide={onHideImage ? () => { onHideImage(selected); setSelectedId(null); } : undefined}
                   onDelete={onDeleteUpload && selected.cloud && (selected.cloud.owner === currentUserId || !!onHideImage)
                     ? () => { onDeleteUpload(selected); setSelectedId(null); } : undefined}

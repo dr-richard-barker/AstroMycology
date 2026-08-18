@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Crosshair, Scale, RotateCw, Sparkles, Save, Edit3, Loader2, Eraser, MapPin, Camera, ExternalLink, LineChart, Film, Box, Download, EyeOff, Trash2 } from 'lucide-react';
+import { Crosshair, Scale, RotateCw, Sparkles, Save, Edit3, Loader2, Eraser, MapPin, Camera, ExternalLink, LineChart, Film, Box, Download, EyeOff, Trash2, Biohazard, ScanSearch } from 'lucide-react';
 import type { Ec5Entry, MarkerAnalysis, Pt } from '../types';
 import { urlToImageData } from '../lib/capture';
 import { analyzeMarker, analyzeFromQuad } from '../lib/detect';
-import { saveMarker, clearMarker } from '../api/epicollect';
+import { analyzeContamination, type ContaminationResult, type ContaminationVerdict } from '../lib/contamination';
+import { saveMarker, clearMarker, saveContamination } from '../api/epicollect';
 import { getResults, type AnalysisResult } from '../lib/cose-results';
 import { QuadAnnotator } from './QuadAnnotator';
 import { SmartImg } from './SmartImg';
@@ -11,18 +12,31 @@ import { SmartImg } from './SmartImg';
 interface Props {
   entry: Ec5Entry;
   onMarkerChanged: (uuid: string, marker: MarkerAnalysis | null) => void;
+  onContaminationChanged?: (uuid: string, contamination: ContaminationResult | null) => void;
   onOpenTool: (id: string, imageUrl: string, ref: string) => void;
   onHide?: () => void;    // admin-only: exclude this image
   onDelete?: () => void;  // delete a shared cloud upload (owner or admin)
   deleteIsOwn?: boolean;  // true if the current user owns this upload
 }
 
+const VERDICT_LABEL: Record<ContaminationVerdict, string> = {
+  clean: 'Looks clean', suspect: 'Suspect — check visually', contaminated: 'Likely contaminated', inconclusive: 'Inconclusive (too little of the jar in frame)',
+};
+const VERDICT_CLASS: Record<ContaminationVerdict, string> = { clean: 'pos', suspect: 'neg', contaminated: 'neg', inconclusive: 'info' };
+const BAR_LABEL: Record<keyof ContaminationResult['breakdown'], string> = {
+  pale: 'White / cream (healthy)', green: 'Green mold (hue)', greyMold: 'Grey/sooty mold', dark: 'Dark / black spots',
+  pinkRed: 'Pink / red patches', goldDroplet: 'Gold droplets (normal exudate)', background: 'Background (unclassified)',
+};
+const BAR_COLOR: Record<keyof ContaminationResult['breakdown'], string> = {
+  pale: 'var(--muted)', green: 'var(--danger)', greyMold: '#8a8f98', dark: '#555', pinkRed: '#c0527a', goldDroplet: 'var(--accent2)', background: 'var(--line)',
+};
+
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 const DEFAULT_QUAD: [Pt, Pt, Pt, Pt] = [
   { x: 0.35, y: 0.35 }, { x: 0.65, y: 0.35 }, { x: 0.65, y: 0.6 }, { x: 0.35, y: 0.6 },
 ];
 
-export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onOpenTool, onHide, onDelete, deleteIsOwn }) => {
+export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onContaminationChanged, onOpenTool, onHide, onDelete, deleteIsOwn }) => {
   const slug = entry.project;
   const ref = `${entry.project}::${entry.uuid}`;
 
@@ -37,6 +51,8 @@ export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onOpe
   }, [refreshResults]);
   const [imgData, setImgData] = useState<ImageData | null>(null);
   const [marker, setMarker] = useState<MarkerAnalysis | null>(entry.marker);
+  const [contam, setContam] = useState<ContaminationResult | null>(entry.contamination ?? null);
+  const [contamBusy, setContamBusy] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [annotate, setAnnotate] = useState(false);
   const [quad, setQuad] = useState<[Pt, Pt, Pt, Pt]>(DEFAULT_QUAD);
@@ -48,7 +64,7 @@ export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onOpe
   useEffect(() => { setVideoErr(false); }, [entry.uuid]);
 
   useEffect(() => {
-    setMarker(entry.marker); setAnnotate(false); setDirty(false); setImgData(null); setErr(null);
+    setMarker(entry.marker); setContam(entry.contamination ?? null); setAnnotate(false); setDirty(false); setImgData(null); setErr(null);
     if (!entry.photoUrl) return;
     let alive = true;
     urlToImageData(entry.photoUrl).then(id => {
@@ -86,6 +102,27 @@ export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onOpe
     clearMarker(slug, entry.uuid);
     setMarker(null); setDirty(false);
     onMarkerChanged(entry.uuid, null);
+  };
+
+  const runContamCheck = async () => {
+    if (!imgData) return;
+    setContamBusy(true);
+    try {
+      const result = analyzeContamination(imgData);
+      setContam(result);
+      saveContamination(slug, entry.uuid, result);
+      onContaminationChanged?.(entry.uuid, result);
+    } finally { setContamBusy(false); }
+  };
+  const overrideContam = (verdict: ContaminationVerdict) => {
+    const result: ContaminationResult = {
+      verdict, confidence: 1, overridden: true, analyzedAt: new Date().toISOString(),
+      score: contam?.score ?? 0, coverage: contam?.coverage ?? 0,
+      breakdown: contam?.breakdown ?? { pale: 0, green: 0, greyMold: 0, dark: 0, pinkRed: 0, goldDroplet: 0, background: 0 },
+    };
+    setContam(result);
+    saveContamination(slug, entry.uuid, result);
+    onContaminationChanged?.(entry.uuid, result);
   };
 
   const overlayQuad = marker?.corners ? cornersToFrac(marker.corners, dims.current.w, dims.current.h) : null;
@@ -195,6 +232,50 @@ export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onOpe
           <p className="muted" style={{ fontSize: '.86rem' }}>No marker detected ({marker.cornersFound}/4 corners). Use <strong>Adjust manually</strong> to place the four corners, then compute the scale.</p>
         ) : (
           <p className="muted" style={{ fontSize: '.86rem' }}>Run <strong>Detect marker</strong> to measure scale and colour from the AstroBotany card in this photo. Results are cached locally and included in exports.</p>
+        )}
+      </div>
+
+      <div className="card pad">
+        <div className="card-title sb" style={{ justifyContent: 'space-between' }}>
+          <span className="row" style={{ gap: 8 }}><Biohazard /> Contamination screen</span>
+          {entry.photoUrl && (
+            <button className="btn btn-sm btn-ghost" disabled={!imgData || contamBusy} onClick={runContamCheck}>
+              {contamBusy ? <Loader2 className="spin" /> : <ScanSearch size={14} />} {contam ? 'Re-check' : 'Run check'}
+            </button>
+          )}
+        </div>
+        {!entry.photoUrl ? (
+          <p className="muted" style={{ fontSize: '.86rem' }}>This entry has no photo.</p>
+        ) : !contam ? (
+          <p className="muted" style={{ fontSize: '.86rem' }}>Run a check to screen this photo for likely mold/contamination by colour (white/cream = healthy; grey, black, green or pink patches = flagged). A first-pass heuristic, not a diagnosis — always verify visually.</p>
+        ) : (
+          <>
+            <div className="row wrap" style={{ gap: 8, alignItems: 'center', marginBottom: 10 }}>
+              <span className={`badge ${VERDICT_CLASS[contam.verdict]}`} style={contam.verdict === 'contaminated' ? { background: 'color-mix(in srgb, var(--danger) 18%, transparent)', color: 'var(--danger)' } : undefined}>{VERDICT_LABEL[contam.verdict]}</span>
+              {contam.overridden && <span className="chip tag" style={{ fontSize: '.7rem' }}>manually corrected</span>}
+              {contam.verdict !== 'inconclusive' && !contam.overridden && <span className="muted" style={{ fontSize: '.72rem' }}>confidence {(contam.confidence * 100).toFixed(0)}%</span>}
+            </div>
+            {!contam.overridden && (
+              <div style={{ display: 'grid', gap: 5, marginBottom: 4 }}>
+                {(Object.keys(contam.breakdown) as (keyof ContaminationResult['breakdown'])[]).map(k => (
+                  <div key={k} title={`${BAR_LABEL[k]}: ${(contam.breakdown[k] * 100).toFixed(0)}%`}>
+                    <div className="row sb" style={{ justifyContent: 'space-between', fontSize: '.72rem', marginBottom: 2 }}>
+                      <span className="muted">{BAR_LABEL[k]}</span>
+                      <span className="mono muted">{(contam.breakdown[k] * 100).toFixed(0)}%</span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 4, background: 'var(--line)', overflow: 'hidden' }}>
+                      <div style={{ width: `${contam.breakdown[k] * 100}%`, height: '100%', background: BAR_COLOR[k], borderRadius: 4 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="row wrap" style={{ marginTop: 10, gap: 8 }}>
+              {contam.verdict !== 'clean' && <button className="btn btn-sm btn-ghost" onClick={() => overrideContam('clean')}>Mark clean</button>}
+              {contam.verdict !== 'contaminated' && <button className="btn btn-sm btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => overrideContam('contaminated')}>Mark contaminated</button>}
+            </div>
+            <p className="muted" style={{ fontSize: '.72rem', marginTop: 8 }}>Colour heuristic seeded from this database's own photos — it will misfire on lighting it hasn't seen (blue LED, green screens, etc). Corrections are saved locally and are the seed for a real classifier once there's enough labeled data.</p>
+          </>
         )}
       </div>
 

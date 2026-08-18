@@ -13,6 +13,7 @@ import { fetchGithubFolder, parseGhId, ghUrl, parseFilenameMeta, metaFor, type G
 import { loadLocalEntries, deleteLocalSource } from '../lib/localsource';
 import { authConfigured } from '../lib/supabase';
 import { CLOUD_SLUG, isCloud, fetchCloudPage } from '../lib/uploads';
+import type { ContaminationResult } from '../lib/contamination';
 
 export const EC5_BASE = 'https://five.epicollect.net';
 export const DEMO_SLUG = 'ec5-api-test';
@@ -429,6 +430,21 @@ export function saveMarker(slug: string, uuid: string, marker: MarkerAnalysis) {
 export function clearMarker(slug: string, uuid: string) {
   try { localStorage.removeItem(markerKey(slug, uuid)); } catch { /* ignore */ }
 }
+
+// ---- local contamination-check cache (same pattern as marker analysis) ----
+const contamKey = (slug: string, uuid: string) => `ec5-contam:${slug}:${uuid}`;
+
+export function loadContamination(slug: string, uuid: string): ContaminationResult | null {
+  try { const s = localStorage.getItem(contamKey(slug, uuid)); return s ? JSON.parse(s) : null; }
+  catch { return null; }
+}
+export function saveContamination(slug: string, uuid: string, result: ContaminationResult) {
+  try { localStorage.setItem(contamKey(slug, uuid), JSON.stringify(result)); } catch { /* quota */ }
+}
+export function clearContamination(slug: string, uuid: string) {
+  try { localStorage.removeItem(contamKey(slug, uuid)); } catch { /* ignore */ }
+}
+
 function hydrate(entries: Ec5Entry[]): Ec5Entry[] {
-  return entries.map(e => ({ ...e, marker: loadMarker(e.project, e.uuid) }));
+  return entries.map(e => ({ ...e, marker: loadMarker(e.project, e.uuid), contamination: loadContamination(e.project, e.uuid) }));
 }
