@@ -45,6 +45,13 @@ const BUILTIN: ProjectRef[] = [
     reference: { text: 'The original Mushroom_to_Volume_ply.ipynb notebook + its sample scan, kept as a reference/regression check for the in-app 3D volume calculator.', url: 'https://github.com/dr-richard-barker/AstroMycology/tree/main/legacy' },
     provenance: { organism: 'Mushroom (species unspecified)', conditions: 'Structured-light 3D scan (Revopoint)', description: 'One sample .ply mesh used to sanity-check the in-app volume calculator against the original notebook’s trimesh output.', source: 'legacy/ in this repo' },
   },
+  {
+    slug: 'gh:dr-richard-barker/AstroMycology/main/datasets/blue-oyster-cultivation',
+    name: 'Blue Oyster cultivation (Pleurotus ostreatus)', type: 'github',
+    gh: { owner: 'dr-richard-barker', repo: 'AstroMycology', ref: 'main', path: 'datasets/blue-oyster-cultivation' },
+    reference: { text: 'Real grow-out photos from an active Blue Oyster (Pleurotus ostreatus) cultivation run, including grain-jar colonization, a fruiting cluster wired to electrode probes, and a primordium sample photographed next to an AstroBotany calibration card.', url: 'https://github.com/dr-richard-barker/AstroMycology/tree/main/datasets/blue-oyster-cultivation' },
+    provenance: { organism: 'Pleurotus ostreatus (Blue Oyster)', conditions: 'Jar/grain-spawn cultivation; some jars mold-contaminated', description: '36 RGB photos (35 HEIC + 1 JPG) with EXIF/GPS metadata; 8 flagged contaminated from visual review.', source: 'datasets/blue-oyster-cultivation in this repo' },
+  },
 ];
 
 const CUSTOM_KEY = 'ec5-projects'; // user-added ProjectRef[]
