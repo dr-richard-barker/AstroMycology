@@ -1,4 +1,4 @@
 {
-  "name": "AstroMycology Calibration Image Database",
-  "description": "Static viewer for a community collection of organism/science photos taken alongside the AstroMycology calibration marker. Photos + metadata are stored in a free Epicollect5 project; marker detection and colour calibration run client-side. Deploys to GitHub Pages. No server, no Google GenAI."
+  "name": "AstroMycology",
+  "description": "Static database for mushroom imagery — RGB photos, RGB-thermal photos, and 3D scans — with an in-browser Three.js 3D viewer/analysis tool and client-side calibration-marker scale & colour recovery on flat photos. Sources: Epicollect5, public GitHub folders, or local upload (including HEIC). Deploys to GitHub Pages. No server, no Google GenAI."
 }

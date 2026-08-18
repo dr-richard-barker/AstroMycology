@@ -207,7 +207,8 @@ function AppInner({ auth }: { auth: AuthState }) {
               <div style={{ fontSize: '.85rem' }}>Showing Epicollect5’s public demo project. Choose a real project from the selector, or add one in <button className="btn btn-sm btn-primary" style={{ padding: '2px 8px' }} onClick={() => setTab('contribute')}>Contribute</button></div>
             </div>
           )}
-          {active !== ALL && !isDemoProject(active) && tab === 'database' && !loading && stats.total > 0 && stats.withPhoto === 0 && (
+          {active !== ALL && !isDemoProject(active) && tab === 'database' && !loading && stats.total > 0 && stats.withPhoto === 0
+            && !entries.every(e => e.scanUrl || e.videoUrl) && (
             <div className="card pad" style={{ marginBottom: 14, borderColor: 'var(--warn)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
               <AlertTriangle size={18} color="var(--warn)" style={{ flexShrink: 0, marginTop: 1 }} />
               <div style={{ fontSize: '.85rem' }}>
