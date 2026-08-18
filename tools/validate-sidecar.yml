@@ -1,0 +1,45 @@
+name: Validate AstroMycology Sidecar Metadata
+
+on:
+  push:
+    paths:
+      - '**/metadata.csv'
+      - '**/metadata.json'
+  pull_request:
+    paths:
+      - '**/metadata.csv'
+      - '**/metadata.json'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install jsonschema
+
+      - name: Fetch Sidecar Schema
+        run: |
+          curl -sS https://raw.githubusercontent.com/dr-richard-barker/AstroMycology_calibration_image_sharing_and_analysis/main/sidecar-schema.json -o sidecar-schema.json
+
+      - name: Fetch Validation Script
+        run: |
+          curl -sS https://raw.githubusercontent.com/dr-richard-barker/AstroMycology_calibration_image_sharing_and_analysis/main/tools/validate_sidecar.py -o validate_sidecar.py
+
+      - name: Run Validator
+        run: |
+          # Finds all metadata files and validates them against the schema
+          find . -name "metadata.csv" -o -name "metadata.json" | while read -r file; do
+            if [ "$file" != "./sidecar-schema.json" ]; then
+              echo "Validating $file..."
+              python3 validate_sidecar.py "$file" sidecar-schema.json
+            fi
+          done

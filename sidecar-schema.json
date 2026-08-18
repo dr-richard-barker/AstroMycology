@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AstroMycologySidecarMetadata",
+  "description": "Standardized schema for AstroMycology calibration image sidecar metadata (both CSV row mapping and JSON list formats)",
+  "type": "object",
+  "properties": {
+    "filename": {
+      "type": "string",
+      "description": "The exact name of the image file, including extension (e.g. IMG_1212_cropped.jpg). Used as a primary key to match with physical image files."
+    },
+    "species": {
+      "type": "string",
+      "description": "Standard scientific or common name of the organism (e.g. Agaricus bisporus, Pleurotus ostreatus)."
+    },
+    "media_kind": {
+      "type": "string",
+      "enum": ["photo", "thermal", "scan3d", "video"],
+      "description": "What kind of media this row describes: an RGB photo, an RGB-thermal photo, a 3D scan (.ply/.obj/.glb/.gltf/.stl), or a video. Defaults to 'photo' when omitted."
+    },
+    "genotype": {
+      "type": "string",
+      "description": "Strain, isolate, cultivar, or accession identifier (e.g. a specific mushroom strain ID)."
+    },
+    "treatment": {
+      "type": "string",
+      "description": "The experimental treatment, growth condition, or substrate applied (e.g. substrate A, Control, +Trichoderma, 1g)."
+    },
+    "glds_accession": {
+      "type": "string",
+      "description": "The NASA Open Science Data Repository (OSDR) / GeneLab dataset accession ID (e.g. OSD-670)."
+    },
+    "experiment": {
+      "type": "string",
+      "description": "Name or unique ID of the biological experiment (e.g. APEX03, SpaceChile)."
+    },
+    "date_taken": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 formatted datetime string indicating when the photograph was taken (e.g. 2026-07-31T16:17:09Z)."
+    },
+    "latitude": {
+      "type": "number",
+      "minimum": -90,
+      "maximum": 90,
+      "description": "GPS Latitude coordinate."
+    },
+    "longitude": {
+      "type": "number",
+      "minimum": -180,
+      "maximum": 180,
+      "description": "GPS Longitude coordinate."
+    },
+    "camera": {
+      "type": "string",
+      "description": "Camera model, hardware, or device identifier used for capture."
+    },
+    "lighting": {
+      "type": "string",
+      "description": "Lighting conditions under which the image was taken (e.g. LED White, FL, Dark, Red grow-light)."
+    },
+    "scale_bar_mm": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Physical size of the scale reference in millimeters."
+    },
+    "calibration_marker": {
+      "type": "boolean",
+      "description": "Whether a fiducial + colour-chip calibration card (recycled from the AstroBotany project) is present in the frame."
+    },
+    "width_px": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The width of the image in pixels."
+    },
+    "height_px": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The height of the image in pixels."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free text comments, annotations, or observations."
+    },
+    "source_repo": {
+      "type": "string",
+      "description": "URL or owner/repo identifier of the origin repository (e.g. dr-richard-barker/image-analysis-software-and-R-codes)."
+    },
+    "source_path": {
+      "type": "string",
+      "description": "Subdirectory path of the image folder inside the origin repository (e.g. Londultia)."
+    },
+    "contributor": {
+      "type": "string",
+      "description": "Name of the scientist, classroom, or citizen scientist who contributed the image data."
+    },
+    "license": {
+      "type": "string",
+      "default": "CC0-1.0",
+      "description": "Creative Commons or open-source data license covering the image (e.g. CC0-1.0, CC-BY-4.0)."
+    }
+  },
+  "required": ["filename"]
+}

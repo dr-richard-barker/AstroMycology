@@ -1,0 +1,4 @@
+{
+  "name": "AstroMycology Calibration Image Database",
+  "description": "Static viewer for a community collection of organism/science photos taken alongside the AstroMycology calibration marker. Photos + metadata are stored in a free Epicollect5 project; marker detection and colour calibration run client-side. Deploys to GitHub Pages. No server, no Google GenAI."
+}

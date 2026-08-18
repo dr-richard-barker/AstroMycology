@@ -1,0 +1,398 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { BarChart3, Loader2, Images, ImageIcon, Sprout, MapPin, CalendarRange, FolderTree, CheckCircle2, LineChart } from 'lucide-react';
+import type { Ec5Entry } from '../types';
+import { fetchAllComplete, getProjects, projectName } from '../api/epicollect';
+import { allResults, type AnalysisResult } from '../lib/cose-results';
+import { loadWorld, countryOf, featurePath, type GeoFeature } from '../lib/geo';
+
+// A palette derived from the CoSE accent pair, cycled for categorical series.
+const PALETTE = ['#3b6ea5', '#3fb6a8', '#6a8ec2', '#57c2b4', '#8aa9cf', '#7bccc0', '#b7791f', '#9c6ea0'];
+
+export const Dashboard: React.FC = () => {
+  const [entries, setEntries] = useState<Ec5Entry[] | null>(null);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [disabled, setDisabled] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let alive = true;
+    fetchAllComplete(getProjects().map(p => p.slug)).then(r => {
+      if (!alive) return;
+      setEntries(r.entries); setErrors(r.errors);
+    });
+    return () => { alive = false; };
+  }, []);
+
+  const projectsInData = useMemo(() => entries ? [...new Set(entries.map(e => e.project))] : [], [entries]);
+  const data = useMemo(() => (entries || []).filter(e => !disabled.has(e.project)), [entries, disabled]);
+  const toggle = (slug: string) => setDisabled(p => { const n = new Set(p); n.has(slug) ? n.delete(slug) : n.add(slug); return n; });
+
+  const agg = useMemo(() => computeAggregates(data), [data]);
+
+  // World country polygons (bundled GeoJSON), loaded once for the choropleth.
+  const [world, setWorld] = useState<GeoFeature[] | null>(null);
+  useEffect(() => { let a = true; loadWorld(import.meta.env.BASE_URL).then(w => a && setWorld(w)).catch(() => {}); return () => { a = false; }; }, []);
+
+  // Count geotagged images per country by point-in-polygon (respects toggles).
+  const countryCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    if (!world) return m;
+    for (const p of agg.gps) {
+      const c = countryOf(world, p.lng, p.lat);
+      if (c) m.set(c.name, (m.get(c.name) || 0) + 1);
+    }
+    return m;
+  }, [world, agg.gps]);
+
+  // Tool results (shared same-origin store), aggregated across the loaded images.
+  const [toolResults, setToolResults] = useState<AnalysisResult[]>([]);
+  useEffect(() => {
+    const load = () => allResults().then(setToolResults).catch(() => {});
+    load();
+    window.addEventListener('focus', load); // pick up results written while a tool tab was open
+    return () => window.removeEventListener('focus', load);
+  }, []);
+  const resultSummary = useMemo(() => summariseResults(toolResults, data), [toolResults, data]);
+
+  // Field explorer
+  const [expProject, setExpProject] = useState<string>('');
+  useEffect(() => { if (!expProject && projectsInData[0]) setExpProject(projectsInData[0]); }, [projectsInData, expProject]);
+  const expFields = useMemo(() => fieldNames(data.filter(e => e.project === expProject)), [data, expProject]);
+  const [expField, setExpField] = useState<string>('');
+  useEffect(() => { if (expFields.length && !expFields.includes(expField)) setExpField(expFields[0]); }, [expFields, expField]);
+  const expValues = useMemo(() => valueCounts(data.filter(e => e.project === expProject), expField), [data, expProject, expField]);
+
+  if (!entries) {
+    return <div className="empty"><Loader2 className="spin" /> <div style={{ marginTop: 10 }}>Loading all entries across projects…</div></div>;
+  }
+
+  return (
+    <div>
+      <div className="page-head">
+        <div className="eyebrow">Dashboard</div>
+        <h1>Collection analytics</h1>
+        <p>An overview of every entry across the connected Epicollect5 projects — {entries.length} entries. Toggle projects to focus the charts.</p>
+      </div>
+
+      {errors.length > 0 && <div className="card pad" style={{ marginBottom: 14, borderColor: 'var(--warn)', color: 'var(--warn)', fontSize: '.82rem' }}>{errors.map((e, i) => <div key={i}>{e}</div>)}</div>}
+
+      {projectsInData.length > 1 && (
+        <div className="row wrap" style={{ gap: 6, marginBottom: 16, alignItems: 'center' }}>
+          <span className="muted" style={{ fontSize: '.76rem' }}>Projects:</span>
+          {projectsInData.map((slug, i) => {
+            const on = !disabled.has(slug);
+            return (
+              <button key={slug} onClick={() => toggle(slug)} className="chip" style={{
+                cursor: 'pointer', opacity: on ? 1 : 0.5,
+                background: on ? `color-mix(in srgb, ${PALETTE[i % PALETTE.length]} 18%, transparent)` : 'var(--card)',
+                color: on ? PALETTE[i % PALETTE.length] : 'var(--muted)',
+                borderColor: on ? `color-mix(in srgb, ${PALETTE[i % PALETTE.length]} 45%, transparent)` : 'var(--line)',
+              }}>
+                <span style={{ width: 8, height: 8, borderRadius: 8, background: PALETTE[i % PALETTE.length], display: 'inline-block' }} /> {projectName(slug)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="stat-row" style={{ marginBottom: 18 }}>
+        <Tile icon={<Images size={13} />} k="Entries" v={agg.total} />
+        <Tile icon={<FolderTree size={13} />} k="Projects" v={agg.projects} />
+        <Tile icon={<ImageIcon size={13} />} k="With photos" v={agg.withPhoto} accent />
+        <Tile icon={<CheckCircle2 size={13} />} k="Analyzed" v={agg.analyzed} teal />
+        <Tile icon={<Sprout size={13} />} k="Species" v={agg.speciesCount} />
+        <Tile icon={<MapPin size={13} />} k="GPS-tagged" v={agg.gpsCount} />
+      </div>
+
+      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', marginBottom: 16 }}>
+        <div className="card pad">
+          <div className="card-title"><FolderTree /> Entries per project</div>
+          <HBar data={agg.byProject} colorFor={(_, i) => PALETTE[i % PALETTE.length]} />
+        </div>
+        <div className="card pad">
+          <div className="card-title"><Sprout /> Top species</div>
+          {agg.topSpecies.length ? <HBar data={agg.topSpecies} colorFor={() => 'var(--accent2)'} />
+            : <p className="muted" style={{ fontSize: '.85rem' }}>No species field detected in these entries.</p>}
+        </div>
+      </div>
+
+      {resultSummary.length > 0 && (
+        <div className="card pad" style={{ marginBottom: 16 }}>
+          <div className="card-title"><LineChart /> Analysis results summary</div>
+          <p className="muted" style={{ fontSize: '.8rem', marginTop: -6, marginBottom: 12 }}>Averaged across images analysed by the sibling tools and written back to the shared store.</p>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))' }}>
+            {resultSummary.map((t, i) => (
+              <div key={t.tool} className="card pad" style={{ background: 'var(--bg)' }}>
+                <div className="row sb" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+                  <strong style={{ fontSize: '.9rem', color: PALETTE[i % PALETTE.length] }}>{t.toolName}</strong>
+                  <span className="chip">{t.images} image{t.images === 1 ? '' : 's'}</span>
+                </div>
+                <dl className="kv">
+                  {t.metrics.map(m => (
+                    <React.Fragment key={m.k}>
+                      <dt>{m.k}</dt>
+                      <dd>{m.mean.toFixed(m.mean >= 100 ? 0 : 2)}{m.unit ? ` ${m.unit}` : ''} <span className="muted">· n={m.n}</span></dd>
+                    </React.Fragment>
+                  ))}
+                </dl>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="card pad" style={{ marginBottom: 16 }}>
+        <div className="card-title"><CalendarRange /> Entries over time</div>
+        {agg.byMonth.length ? <MonthBars data={agg.byMonth} /> : <p className="muted" style={{ fontSize: '.85rem' }}>No dated entries.</p>}
+      </div>
+
+      {agg.gps.length > 0 && (
+        <div className="card pad" style={{ marginBottom: 16 }}>
+          <div className="card-title"><MapPin /> Images by country ({countryCounts.size} countr{countryCounts.size === 1 ? 'y' : 'ies'}, {agg.gps.length} geotagged)</div>
+          <WorldMap
+            world={world}
+            countryCounts={countryCounts}
+            points={agg.gps}
+            colorFor={slug => PALETTE[Math.max(0, projectsInData.indexOf(slug)) % PALETTE.length]}
+          />
+        </div>
+      )}
+
+      <div className="card pad">
+        <div className="card-title"><BarChart3 /> Metadata field explorer</div>
+        <p className="muted" style={{ fontSize: '.8rem', marginTop: -6, marginBottom: 12 }}>Pick a project and one of its form fields to see how the answers are distributed.</p>
+        <div className="row wrap" style={{ gap: 8, marginBottom: 12 }}>
+          <select className="select" style={{ width: 'auto', maxWidth: 260 }} value={expProject} onChange={e => setExpProject(e.target.value)}>
+            {projectsInData.map(s => <option key={s} value={s}>{projectName(s)}</option>)}
+          </select>
+          <select className="select" style={{ width: 'auto', maxWidth: 320 }} value={expField} onChange={e => setExpField(e.target.value)}>
+            {expFields.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+        </div>
+        {expValues.length ? <HBar data={expValues} colorFor={() => 'var(--accent)'} />
+          : <p className="muted" style={{ fontSize: '.85rem' }}>No answers recorded for this field.</p>}
+      </div>
+    </div>
+  );
+};
+
+// ---- tiles ----
+const Tile: React.FC<{ icon: React.ReactNode; k: string; v: number; accent?: boolean; teal?: boolean }> = ({ icon, k, v, accent, teal }) => (
+  <div className="stat"><div className="k">{icon} {k}</div><div className={`v ${accent ? 'accent' : ''} ${teal ? 'teal' : ''}`}>{v}</div></div>
+);
+
+// ---- horizontal bar chart (divs, responsive, theme-aware) ----
+const HBar: React.FC<{ data: { label: string; value: number }[]; colorFor: (d: { label: string; value: number }, i: number) => string }> = ({ data, colorFor }) => {
+  const max = Math.max(1, ...data.map(d => d.value));
+  return (
+    <div className="grid" style={{ gap: 7 }}>
+      {data.map((d, i) => (
+        <div key={i} title={`${d.label}: ${d.value}`}>
+          <div className="row sb" style={{ justifyContent: 'space-between', fontSize: '.78rem', marginBottom: 3 }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75%' }}>{d.label}</span>
+            <span className="mono muted">{d.value}</span>
+          </div>
+          <div style={{ height: 8, borderRadius: 5, background: 'var(--line)', overflow: 'hidden' }}>
+            <div style={{ width: `${(d.value / max) * 100}%`, height: '100%', background: colorFor(d, i), borderRadius: 5, transition: 'width .3s' }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ---- monthly vertical bars ----
+const MonthBars: React.FC<{ data: { label: string; value: number }[] }> = ({ data }) => {
+  const max = Math.max(1, ...data.map(d => d.value));
+  const step = Math.ceil(data.length / 12);
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 160, overflowX: 'auto', paddingTop: 8 }}>
+      {data.map((d, i) => (
+        <div key={i} title={`${d.label}: ${d.value}`} style={{ flex: '1 0 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', minWidth: 14 }}>
+          <span style={{ fontSize: '.62rem', color: 'var(--muted)', marginBottom: 2 }}>{d.value || ''}</span>
+          <div style={{ width: '70%', height: `${(d.value / max) * 100}%`, minHeight: d.value ? 3 : 0, background: 'var(--accent)', borderRadius: '3px 3px 0 0' }} />
+          <span style={{ fontSize: '.56rem', color: 'var(--muted)', marginTop: 4, transform: 'rotate(-45deg)', whiteSpace: 'nowrap', transformOrigin: 'center', height: 26 }}>
+            {i % step === 0 ? d.label : ''}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Resolve a CSS custom property to a concrete colour. SVG presentation
+// attributes (fill=/stroke=) do NOT accept var() in Safari/WebKit, so we read
+// the value and pass a literal colour instead — renders in every browser.
+function readVars(names: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  const cs = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
+  for (const [k, fallback] of Object.entries(names)) out[k] = (cs?.getPropertyValue(k).trim() || fallback);
+  return out;
+}
+
+// ---- colour helpers (concrete hex, so SVG fill works in every browser) ----
+function parseColor(s: string): [number, number, number] {
+  s = s.trim();
+  if (s.startsWith('#')) {
+    const h = s.slice(1);
+    const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+    return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
+  }
+  const m = s.match(/[\d.]+/g);
+  return m ? [+m[0], +m[1], +m[2]] : [0, 0, 0];
+}
+const toHex = (c: number[]) => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+const mix = (a: string, b: string, t: number) => { const ca = parseColor(a), cb = parseColor(b); return toHex([0, 1, 2].map(i => ca[i] + (cb[i] - ca[i]) * t)); };
+
+// ---- World choropleth (equirectangular; countries shaded by image count) ----
+const WorldMap: React.FC<{
+  world: GeoFeature[] | null;
+  countryCounts: Map<string, number>;
+  points: { lat: number; lng: number; label: string; project: string }[];
+  colorFor: (slug: string) => string;
+}> = ({ world, countryCounts, points, colorFor }) => {
+  const W = 720, H = 360;
+  const x = (lng: number) => ((lng + 180) / 360) * W;
+  const y = (lat: number) => ((90 - lat) / 180) * H;
+  const c = readVars({ '--line': '#e5e9f0', '--muted': '#5a6473', '--accent': '#3b6ea5', '--accent2': '#3fb6a8', '--bg': '#ffffff', '--card': '#ffffff' });
+
+  const ocean = mix(c['--accent'], c['--bg'], 0.9);          // faint blue sea
+  const land0 = mix(c['--muted'], c['--bg'], 0.82);          // neutral land, no images
+  // Discrete count bins with a distinct green→red ramp — far easier to tell
+  // apart than a single-hue gradient when counts are skewed (e.g. 143 vs 1).
+  const BINS = [
+    { min: 1, max: 1, label: '1', color: '#4da64d' },
+    { min: 2, max: 5, label: '2–5', color: '#a6d96a' },
+    { min: 6, max: 20, label: '6–20', color: '#fee08b' },
+    { min: 21, max: 100, label: '21–100', color: '#fc8d3c' },
+    { min: 101, max: Infinity, label: '100+', color: '#d7191c' },
+  ];
+  const maxCount = Math.max(0, ...countryCounts.values());
+  const binFor = (n: number) => { let b = BINS[0]; for (const x of BINS) if (n >= x.min) b = x; return b; };
+  const fillFor = (name: string) => { const n = countryCounts.get(name) || 0; return n ? binFor(n).color : land0; };
+  const shownBins = BINS.filter(b => b.min <= maxCount);
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 460, borderRadius: 8, display: 'block' }}>
+        {/* ocean */}
+        <rect x={0} y={0} width={W} height={H} fill={ocean} stroke={c['--line']} />
+        {/* equator + prime meridian for orientation */}
+        <line x1={x(0)} y1={0} x2={x(0)} y2={H} stroke={c['--line']} strokeWidth={0.5} strokeOpacity={0.7} />
+        <line x1={0} y1={y(0)} x2={W} y2={y(0)} stroke={c['--line']} strokeWidth={0.5} strokeOpacity={0.7} />
+        {/* countries — shaded by image count */}
+        {world && world.map(f => {
+          const n = countryCounts.get(f.name) || 0;
+          return (
+            <path key={f.id} d={featurePath(f, x, y)} fill={fillFor(f.name)} stroke={n ? mix(fillFor(f.name), '#000000', 0.28) : c['--card']} strokeWidth={n ? 0.5 : 0.4} strokeLinejoin="round">
+              <title>{`${f.name}: ${n} image${n === 1 ? '' : 's'}`}</title>
+            </path>
+          );
+        })}
+        {!world && <text x={W / 2} y={H / 2} fontSize={12} fill={c['--muted']} textAnchor="middle">Loading world map…</text>}
+        {/* exact geotagged points (small, on top of the choropleth) */}
+        {points.map((p, i) => (
+          <circle key={i} cx={x(p.lng)} cy={y(p.lat)} r={2.4} fill={colorFor(p.project)} fillOpacity={0.9} stroke={c['--bg']} strokeWidth={0.5}>
+            <title>{`${p.label} — ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}`}</title>
+          </circle>
+        ))}
+      </svg>
+      <div className="row wrap muted" style={{ fontSize: '.72rem', marginTop: 8, gap: 12, alignItems: 'center' }}>
+        <span style={{ fontWeight: 500 }}>images / country:</span>
+        {shownBins.map(b => (
+          <span key={b.label} className="row" style={{ gap: 4, alignItems: 'center' }}>
+            <span style={{ width: 12, height: 12, borderRadius: 3, background: b.color, display: 'inline-block', border: `1px solid ${mix(b.color, '#000000', 0.28)}` }} /> {b.label}
+          </span>
+        ))}
+        <span className="row" style={{ gap: 4, alignItems: 'center' }}><span style={{ width: 12, height: 12, borderRadius: 3, background: land0, display: 'inline-block', border: `1px solid ${c['--line']}` }} /> none</span>
+      </div>
+    </div>
+  );
+};
+
+// ---- aggregation ----
+function computeAggregates(entries: Ec5Entry[]) {
+  const byProjectMap = new Map<string, number>();
+  const speciesMap = new Map<string, number>();
+  const monthMap = new Map<string, number>();
+  const gps: { lat: number; lng: number; label: string; project: string }[] = [];
+  let withPhoto = 0, analyzed = 0;
+
+  for (const e of entries) {
+    byProjectMap.set(e.project, (byProjectMap.get(e.project) || 0) + 1);
+    if (e.photoUrl) withPhoto++;
+    if (e.marker?.markerFound) analyzed++;
+    if (e.species) speciesMap.set(e.species, (speciesMap.get(e.species) || 0) + 1);
+    if (e.gps) gps.push({ ...e.gps, label: e.title, project: e.project });
+    const d = e.createdAt || e.uploadedAt;
+    if (d && d.length >= 7) monthMap.set(d.slice(0, 7), (monthMap.get(d.slice(0, 7)) || 0) + 1);
+  }
+
+  const byProject = [...byProjectMap.entries()].sort((a, b) => b[1] - a[1]).map(([slug, v]) => ({ label: projectName(slug), value: v }));
+  const topSpecies = [...speciesMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([label, value]) => ({ label, value }));
+  const byMonth = fillMonths(monthMap);
+
+  return {
+    total: entries.length,
+    projects: byProjectMap.size,
+    withPhoto, analyzed,
+    speciesCount: speciesMap.size,
+    gpsCount: gps.length, gps,
+    byProject, topSpecies, byMonth,
+  };
+}
+
+// Continuous month buckets from earliest to latest so gaps render as zero bars.
+function fillMonths(m: Map<string, number>): { label: string; value: number }[] {
+  const keys = [...m.keys()].sort();
+  if (!keys.length) return [];
+  const [ys, ms] = keys[0].split('-').map(Number);
+  const [ye, me] = keys[keys.length - 1].split('-').map(Number);
+  const out: { label: string; value: number }[] = [];
+  let y = ys, mo = ms;
+  for (let guard = 0; guard < 240; guard++) {
+    const key = `${y}-${String(mo).padStart(2, '0')}`;
+    out.push({ label: key, value: m.get(key) || 0 });
+    if (y === ye && mo === me) break;
+    mo++; if (mo > 12) { mo = 1; y++; }
+  }
+  return out;
+}
+
+// Aggregate tool results across the loaded (and project-toggle-enabled) images:
+// per tool, the mean of each numeric metric (parsing a leading number + unit).
+function summariseResults(results: AnalysisResult[], entries: Ec5Entry[]) {
+  const enabled = new Set(entries.map(e => `${e.project}::${e.uuid}`));
+  const rel = results.filter(r => enabled.has(r.ref));
+  const byTool = new Map<string, { toolName: string; refs: Set<string>; metrics: Map<string, { sum: number; n: number; unit: string }> }>();
+  for (const r of rel) {
+    let g = byTool.get(r.tool);
+    if (!g) { g = { toolName: r.toolName, refs: new Set(), metrics: new Map() }; byTool.set(r.tool, g); }
+    g.refs.add(r.ref);
+    for (const [k, v] of Object.entries(r.metrics)) {
+      const num = parseFloat(String(v));
+      if (Number.isNaN(num)) continue;
+      const unit = String(v).replace(/^[+\-\d.,]+\s*/, '').trim();
+      let m = g.metrics.get(k);
+      if (!m) { m = { sum: 0, n: 0, unit }; g.metrics.set(k, m); }
+      m.sum += num; m.n++;
+    }
+  }
+  return [...byTool.entries()].map(([tool, g]) => ({
+    tool, toolName: g.toolName, images: g.refs.size,
+    metrics: [...g.metrics.entries()].map(([k, m]) => ({ k, mean: m.sum / m.n, n: m.n, unit: m.unit })),
+  }));
+}
+
+function fieldNames(entries: Ec5Entry[]): string[] {
+  const set = new Set<string>();
+  for (const e of entries) for (const f of e.fields) set.add(f.name);
+  return [...set];
+}
+function valueCounts(entries: Ec5Entry[], fieldName: string): { label: string; value: number }[] {
+  const m = new Map<string, number>();
+  for (const e of entries) {
+    const f = e.fields.find(x => x.name === fieldName);
+    if (f && f.value) m.set(f.value, (m.get(f.value) || 0) + 1);
+  }
+  return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15).map(([label, value]) => ({ label, value }));
+}

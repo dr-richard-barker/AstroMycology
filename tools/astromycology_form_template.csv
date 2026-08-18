@@ -1,0 +1,32 @@
+#,Question,Type,Required,Title,Options,Notes
+1,Sample / experiment ID,text,yes,yes,,"Unique key, e.g. LAB-EXP-2026-001. Ties images, metadata and results together."
+2,Contributor name,text,,,,Who recorded this entry.
+3,Date of observation,date,,,,ISO 8601. Use the app to auto-fill current date if desired.
+4,DOI or citation (optional),text,,,,Reference for the protocol/dataset.
+5,Species (Latin binomial),text,yes,,,e.g. Arabidopsis thaliana. Use one controlled field.
+6,Genotype / ecotype / cultivar,text,,,,"e.g. Col-0, WS, Micro-Tom."
+7,Environment,dropdown,,,Ground control (1g) | Clinostat / random-positioning | ISS / microgravity | Parabolic flight | Other,Gravity / spaceflight context — currently only one project captures this.
+8,Location,location,,,,GPS (auto-captured by the app) for ground samples.
+9,Growth medium / substrate,dropdown,,,Agar / gel | Soil | Rockwool | Hydroponic | Aeroponic | Other,
+10,Medium concentration / strength,text,,,,e.g. 0.5% phytagel; ½ MS.
+11,Nutrient solution,text,,,,"e.g. ½ MS, ½ LS; sucrose %."
+12,Watering / nutrient delivery,textarea,,,,
+13,Light source,dropdown,,,LED | Fluorescent | Sunlight | Mixed | Other,
+14,Light spectrum,checkbox,,,Red | Green | Blue | White | Far-red | Full spectrum,
+15,Light intensity (µmol·m⁻²·s⁻¹),integer,,,,PPFD. Give a number + this unit.
+16,Photoperiod (hours light / day),integer,,,,0–24.
+17,Temperature (°C),decimal,,,,Standardise on °C.
+18,Relative humidity (%),integer,,,,
+19,CO₂ (%) (optional),decimal,,,,
+20,Sowing / planting date,date,,,,
+21,Days to germination,integer,,,,
+22,Days after planting at imaging,integer,,,,
+23,Measurement type,dropdown,,,Plant height | Plant width | Root length | Leaf / canopy area | Fresh mass | Dry mass | Leaf count | Fruit count | Other,
+24,Measurement value,decimal,,,,Record with the unit below and the method.
+25,Measurement unit,dropdown,,,mm | cm | mm² | cm² | g | mg | count,
+26,Phenotype notes,textarea,,,,
+27,Photo,photo,yes,,,Photograph the specimen NEXT TO the calibration marker so scale & colour are recoverable.
+28,Calibration marker in frame?,dropdown,yes,,Yes — AstroMycology ArUco card | Yes — ruler / scale bar | Yes — colour card | No,The field the reviewed projects were missing.
+29,Marker type / notes,text,,,,
+30,Camera / lens (optional),text,,,,
+31,General notes / issues,textarea,,,,

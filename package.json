@@ -1,0 +1,34 @@
+{
+  "name": "astromycology-image-db",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Static viewer for a mushroom-imaging collection: RGB photos, RGB-thermal photos, and 3D scans (RGB, thermal, .ply/.obj/.glb/.stl), plus client-side marker analysis and an in-app 3D viewer. No server, deploys to GitHub Pages.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.9",
+    "exifr": "^7.1.3",
+    "heic2any": "^0.0.4",
+    "js-aruco2": "^2.0.0",
+    "lucide-react": "^0.546.0",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "three": "^0.180.0",
+    "utif2": "^4.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "tailwindcss": "^4.1.14",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.3"
+  }
+}
