@@ -1,0 +1,41 @@
+filename,species,media_kind,genotype,treatment,captured,latitude,longitude,camera,width_px,height_px,notes,source_path
+Harvest10_Tube2_IMG_0872.JPG,Pleurotus ostreatus,photo,Blue Oyster,Harvest 10 · Tube 2,2024-12-27T13:28:10,,,Canon EOS Rebel SL3,6000,4000,,Harvest 10/Tube 2/IMG_0872.JPG
+Harvest10_Tube2_thermal_HM20241228010229.jpeg,Pleurotus ostreatus,thermal,Blue Oyster,Harvest 10 · Tube 2,2024-12-28T01:02:29,,,,640,480,,Harvest 10/Tube 2/HM20241228010229.jpeg
+Harvest10_Tube3_IMG_0873.JPG,Pleurotus ostreatus,photo,Blue Oyster,Harvest 10 · Tube 3,2024-12-27T13:32:32,,,Canon EOS Rebel SL3,6000,4000,,Harvest 10/Tube 3/IMG_0873.JPG
+Harvest10_Tube3_mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 10 · Tube 3,2024-12-30T11:22:08,,,,,,mesh — mtime used as best-effort capture date,Harvest 10/Tube 3/Harvest 10_03_mesh.ply
+Harvest10_Tube3_pc.obj,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 10 · Tube 3,2024-12-30T11:22:30,,,,,,pc — mtime used as best-effort capture date,Harvest 10/Tube 3/Harvest 10_03_pc.obj
+Harvest10_Tube3_pc.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 10 · Tube 3,2024-12-30T11:22:08,,,,,,pc — mtime used as best-effort capture date,Harvest 10/Tube 3/Harvest 10_03_pc.ply
+Harvest10_Tube3_thermal_HM20241228010641.jpeg,Pleurotus ostreatus,thermal,Blue Oyster,Harvest 10 · Tube 3,2024-12-28T01:06:41,,,,640,480,,Harvest 10/Tube 3/HM20241228010641.jpeg
+Harvest1_Tube1_IMG_0481.JPG,Pleurotus ostreatus,photo,Blue Oyster,Harvest 1 · Tube 1,2024-11-01T13:08:53,,,Canon EOS Rebel SL3,6000,4000,,Harvest 1/Tube 1/IMG_0481.JPG
+Harvest2_Tube1_IMG_0524.JPG,Pleurotus ostreatus,photo,Blue Oyster,Harvest 2 · Tube 1,2024-11-08T13:37:33,,,Canon EOS Rebel SL3,6000,4000,,Harvest 2/Tube 1/IMG_0524.JPG
+Harvest2_Tube1_IMG_0525.JPG,Pleurotus ostreatus,photo,Blue Oyster,Harvest 2 · Tube 1,2024-11-08T13:37:47,,,Canon EOS Rebel SL3,6000,4000,,Harvest 2/Tube 1/IMG_0525.JPG
+Harvest2_Tube1_pc.obj,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 2 · Tube 1,2024-11-08T09:37:24,,,,,,pc — mtime used as best-effort capture date,Harvest 2/Tube 1/Harvest2_01_pc.obj
+Harvest2_Tube1_thermal_HM20241109011303.jpeg,Pleurotus ostreatus,thermal,Blue Oyster,Harvest 2 · Tube 1,2024-11-09T01:13:03,,,,640,480,,Harvest 2/Tube 1/HM20241109011303.jpeg
+Harvest2_Tube2_IMG_0529.JPG,Pleurotus ostreatus,photo,Blue Oyster,Harvest 2 · Tube 2,2024-11-08T13:45:56,,,Canon EOS Rebel SL3,6000,4000,,Harvest 2/Tube 2/IMG_0529.JPG
+Harvest2_Tube2_mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 2 · Tube 2,2024-11-08T09:36:02,,,,,,mesh — mtime used as best-effort capture date,Harvest 2/Tube 2/Harvest2_02_mesh.ply
+Harvest2_Tube2_pc.obj,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 2 · Tube 2,2024-11-08T09:36:28,,,,,,pc — mtime used as best-effort capture date,Harvest 2/Tube 2/Harvest2_02_pc.obj
+Harvest2_Tube2_thermal_HM20241109012103.jpeg,Pleurotus ostreatus,thermal,Blue Oyster,Harvest 2 · Tube 2,2024-11-09T01:21:03,,,,640,480,,Harvest 2/Tube 2/HM20241109012103.jpeg
+Harvest5_Tube1_mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 5 · Tube 1,2026-08-19T12:06:11.496337,,,,,,"mesh — converted from a 144MB OBJ (over GitHub's 100MB file limit) to binary PLY, same geometry",Harvest 5/Tube 1/Harvest 5_01_mesh.obj
+Harvest5_Tube1_pc.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 5 · Tube 1,2024-11-30T10:22:14,,,,,,pc — mtime used as best-effort capture date,Harvest 5/Tube 1/Harvest 5_01_pc.ply
+Harvest5_Tube1_thermal_HM20241130020312.jpeg,Pleurotus ostreatus,thermal,Blue Oyster,Harvest 5 · Tube 1,2024-11-30T02:03:12,,,,640,480,,Harvest 5/Tube 1/HM20241130020312.jpeg
+Harvest5_Tube1_thermal_HM20241130020322.jpeg,Pleurotus ostreatus,thermal,Blue Oyster,Harvest 5 · Tube 1,2024-11-30T02:03:22,,,,640,480,,Harvest 5/Tube 1/HM20241130020322.jpeg
+Harvest5_Tube2_IMG_0802.JPG,Pleurotus ostreatus,photo,Blue Oyster,Harvest 5 · Tube 2,2024-11-29T14:31:09,,,Canon EOS Rebel SL3,6000,4000,,Harvest 5/Tube 2/IMG_0802.JPG
+Harvest5_Tube2_mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 5 · Tube 2,2024-11-30T10:23:04,,,,,,mesh — mtime used as best-effort capture date,Harvest 5/Tube 2/Harvest 5_02_mesh.ply
+Harvest5_Tube2_pc.obj,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 5 · Tube 2,2024-11-30T10:23:28,,,,,,pc — mtime used as best-effort capture date,Harvest 5/Tube 2/Harvest 5_02_pc.obj
+Harvest5_Tube2_thermal_HM20241130020525.jpeg,Pleurotus ostreatus,thermal,Blue Oyster,Harvest 5 · Tube 2,2024-11-30T02:05:25,,,,640,480,,Harvest 5/Tube 2/HM20241130020525.jpeg
+Harvest5_Tube2_thermal_HM20241130020528.jpeg,Pleurotus ostreatus,thermal,Blue Oyster,Harvest 5 · Tube 2,2024-11-30T02:05:28,,,,640,480,,Harvest 5/Tube 2/HM20241130020528.jpeg
+Harvest5_Tube3_IMG_0807.JPG,Pleurotus ostreatus,photo,Blue Oyster,Harvest 5 · Tube 3,2024-11-29T14:34:04,,,Canon EOS Rebel SL3,6000,4000,,Harvest 5/Tube 3/IMG_0807.JPG
+Harvest5_Tube3_IMG_0809.JPG,Pleurotus ostreatus,photo,Blue Oyster,Harvest 5 · Tube 3,2024-11-29T14:34:20,,,Canon EOS Rebel SL3,6000,4000,,Harvest 5/Tube 3/IMG_0809.JPG
+Harvest5_Tube3_pc.obj,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 5 · Tube 3,2024-11-30T10:24:16,,,,,,pc — mtime used as best-effort capture date,Harvest 5/Tube 3/Harvest 5_03_pc.obj
+Harvest5_Tube3_thermal_HM20241130020750.jpeg,Pleurotus ostreatus,thermal,Blue Oyster,Harvest 5 · Tube 3,2024-11-30T02:07:50,,,,640,480,,Harvest 5/Tube 3/HM20241130020750.jpeg
+Harvest6_Tube1_IMG_0822.JPG,Pleurotus ostreatus,photo,Blue Oyster,Harvest 6 · Tube 1,2024-12-09T10:44:07,,,Canon EOS Rebel SL3,6000,4000,,Harvest 6/Tube 1/IMG_0822.JPG
+Harvest6_Tube1_mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 6 · Tube 1,2024-12-10T08:52:26,,,,,,mesh — mtime used as best-effort capture date,Harvest 6/Tube 1/Harvest 6_01_mesh.ply
+Harvest6_Tube1_pc.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 6 · Tube 1,2024-12-10T08:52:26,,,,,,pc — mtime used as best-effort capture date,Harvest 6/Tube 1/Harvest 6_01_pc.ply
+Harvest6_Tube1_thermal_HM20241209221927.jpeg,Pleurotus ostreatus,thermal,Blue Oyster,Harvest 6 · Tube 1,2024-12-09T22:19:27,,,,640,480,,Harvest 6/Tube 1/HM20241209221927.jpeg
+Harvest7_Tube2_mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 7 · Tube 2,2024-12-13T13:59:30,,,,,,mesh — mtime used as best-effort capture date,Harvest 7/Tube 2/Harvest 7_02_mesh_mesh.ply
+Harvest7_Tube2_pc.obj,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 7 · Tube 2,2024-12-13T13:59:50,,,,,,pc — mtime used as best-effort capture date,Harvest 7/Tube 2/Harvest 7_02_pc.obj
+Harvest7_Tube3_IMG_0848.JPG,Pleurotus ostreatus,photo,Blue Oyster,Harvest 7 · Tube 3,2024-12-13T13:22:31,,,Canon EOS Rebel SL3,6000,4000,,Harvest 7/Tube 3/IMG_0848.JPG
+Harvest8_Tube3_IMG_0854.JPG,Pleurotus ostreatus,photo,Blue Oyster,Harvest 8 · Tube 3,2024-12-13T13:42:31,,,Canon EOS Rebel SL3,6000,4000,,Harvest 8/Tube 3/IMG_0854.JPG
+Harvest8_Tube3_pc.obj,Pleurotus ostreatus,scan3d,Blue Oyster,Harvest 8 · Tube 3,2024-12-13T14:05:48,,,,,,pc — mtime used as best-effort capture date,Harvest 8/Tube 3/Harvest 8_03_pc.obj
+NakedTube_mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Naked tube (reference scan),2024-11-08T09:09:04,,,,,,mesh — mtime used as best-effort capture date,Naked tube/Naked_mesh.ply
+NakedTube_pc.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Naked tube (reference scan),2024-11-08T09:09:04,,,,,,pc — mtime used as best-effort capture date,Naked tube/Naked_pc.ply

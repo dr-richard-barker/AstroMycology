@@ -52,6 +52,13 @@ const BUILTIN: ProjectRef[] = [
     reference: { text: 'Real grow-out photos from an active Blue Oyster (Pleurotus ostreatus) cultivation run, including grain-jar colonization, a fruiting cluster wired to electrode probes, and a primordium sample photographed next to an AstroBotany calibration card.', url: 'https://github.com/dr-richard-barker/AstroMycology/tree/main/datasets/blue-oyster-cultivation' },
     provenance: { organism: 'Pleurotus ostreatus (Blue Oyster)', conditions: 'Jar/grain-spawn cultivation; some jars mold-contaminated', description: '36 RGB photos (35 HEIC + 1 JPG) with EXIF/GPS metadata; 8 flagged contaminated from visual review.', source: 'datasets/blue-oyster-cultivation in this repo' },
   },
+  {
+    slug: 'gh:dr-richard-barker/AstroMycology/main/datasets/tube-time-series-2024/scans-and-photos',
+    name: 'Tube time series 2024 (10 harvests)', type: 'github',
+    gh: { owner: 'dr-richard-barker', repo: 'AstroMycology', ref: 'main', path: 'datasets/tube-time-series-2024/scans-and-photos' },
+    reference: { text: 'A Blue Oyster grow-tube cultivation run tracked across 10 harvests — paired RGB photos, IR/thermal frames, and 3D scans per tube. Per-minute temperature logs and weekly biomass measurements for the same run are archived alongside (not wired into the gallery — see the dataset README).', url: 'https://github.com/dr-richard-barker/AstroMycology/tree/main/datasets/tube-time-series-2024' },
+    provenance: { organism: 'Pleurotus ostreatus (Blue Oyster)', conditions: '10 harvests × up to 3 tubes; RGB (Canon EOS Rebel SL3) + IR/thermal + 3D scans (mesh + point cloud)', description: '40 files: 12 RGB photos, 10 thermal frames, 18 3D scans (mesh/point-cloud pairs across tubes, plus a reference "naked tube" scan).', source: 'datasets/tube-time-series-2024 in this repo' },
+  },
 ];
 
 const CUSTOM_KEY = 'ec5-projects'; // user-added ProjectRef[]
