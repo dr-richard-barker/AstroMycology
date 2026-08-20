@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Database as DbIcon, CheckCircle2, Images, ImageIcon, Loader2, ChevronDown, FileText, LineChart, Crosshair, PlayCircle, Film, Box, Thermometer, Biohazard } from 'lucide-react';
-import type { Ec5Entry, MarkerAnalysis } from '../types';
+import { Database as DbIcon, CheckCircle2, Images, ImageIcon, Loader2, ChevronDown, FileText, LineChart, Crosshair, PlayCircle, Film, Box, Thermometer, Biohazard, ScanText, Ruler } from 'lucide-react';
+import type { Ec5Entry, MarkerAnalysis, ThermalReading } from '../types';
 import { MarkerInspector } from './MarkerInspector';
 import { SmartImg } from './SmartImg';
-import { projectName, saveMarker, saveContamination } from '../api/epicollect';
-import { allResults } from '../lib/cose-results';
+import { projectName, saveMarker, saveContamination, saveThermalReading } from '../api/epicollect';
+import { allResults, putResult } from '../lib/cose-results';
 import { urlToImageData } from '../lib/capture';
 import { analyzeMarker } from '../lib/detect';
 import { analyzeContamination, type ContaminationResult } from '../lib/contamination';
+import { extractThermalReading } from '../lib/thermal';
+import { loadScan, computeStats, formatFromName, metricsForStats } from '../lib/threed';
 
 interface Props {
   entries: Ec5Entry[];
@@ -18,6 +20,7 @@ interface Props {
   onLoadMore: () => void;
   onMarkerChanged: (uuid: string, marker: MarkerAnalysis | null) => void;
   onContaminationChanged: (uuid: string, contamination: ContaminationResult | null) => void;
+  onThermalChanged: (uuid: string, thermal: ThermalReading | null) => void;
   onOpenTool: (id: string, imageUrl: string, ref: string) => void;
   onHideImage?: (e: Ec5Entry) => void;   // admin-only: exclude an image
   currentUserId?: string;                // signed-in user (for owner delete)
@@ -35,7 +38,7 @@ const genoOf = (e: Ec5Entry): string =>
 const treatOf = (e: Ec5Entry): string =>
   e.fields.find(f => /^(treatment|growth condition|dose)$/i.test(f.name.trim()))?.value.trim() || '';
 
-export const Database: React.FC<Props> = ({ entries, query, loading, hasNext, showProject, onLoadMore, onMarkerChanged, onContaminationChanged, onOpenTool, onHideImage, currentUserId, onDeleteUpload }) => {
+export const Database: React.FC<Props> = ({ entries, query, loading, hasNext, showProject, onLoadMore, onMarkerChanged, onContaminationChanged, onThermalChanged, onOpenTool, onHideImage, currentUserId, onDeleteUpload }) => {
   const [filter, setFilter] = useState<Filter>('all');
   const [disabled, setDisabled] = useState<Set<string>>(new Set()); // projects toggled off
   const [disabledGeno, setDisabledGeno] = useState<Set<string>>(new Set()); // genotypes toggled off
@@ -97,18 +100,86 @@ export const Database: React.FC<Props> = ({ entries, query, loading, hasNext, sh
     if (aliveRef.current) setContamProgress(null);
   };
 
-  // Which images have tool results (ref -> count), from the shared store.
+  // Batch thermal-value OCR: same pattern again, over thermal entries that
+  // haven't been read (or manually corrected) yet.
+  const [thermalProgress, setThermalProgress] = useState<{ done: number; total: number } | null>(null);
+  const pendingThermal = useMemo(() => entries.filter(e => e.mediaKind === 'thermal' && e.photoUrl && !e.thermal), [entries]);
+  const runThermalBatch = async () => {
+    if (!pendingThermal.length || thermalProgress) return;
+    aliveRef.current = true;
+    const queue = [...pendingThermal];
+    setThermalProgress({ done: 0, total: queue.length });
+    let done = 0, idx = 0;
+    const worker = async () => {
+      while (idx < queue.length && aliveRef.current) {
+        const e = queue[idx++];
+        try {
+          const reading = await extractThermalReading(e.photoUrl!);
+          if (!aliveRef.current) return;
+          saveThermalReading(e.project, e.uuid, reading);
+          onThermalChanged(e.uuid, reading);
+        } catch { /* skip unreadable image */ }
+        setThermalProgress({ done: ++done, total: queue.length });
+      }
+    };
+    // A single shared Tesseract worker underneath — 2 concurrent keeps the UI
+    // responsive without actually running OCR in parallel (it's queued anyway).
+    await Promise.all([worker(), worker()]);
+    if (aliveRef.current) setThermalProgress(null);
+  };
+
+  // Which images have tool results (ref -> count), and which scan3d entries
+  // already have a saved volume, from the shared store.
   const [resultCounts, setResultCounts] = useState<Map<string, number>>(new Map());
+  const [volumeRefs, setVolumeRefs] = useState<Set<string>>(new Set());
   useEffect(() => {
     const load = () => allResults().then(rs => {
       const m = new Map<string, number>();
-      for (const r of rs) m.set(r.ref, (m.get(r.ref) || 0) + 1);
-      setResultCounts(m);
+      const vr = new Set<string>();
+      for (const r of rs) {
+        m.set(r.ref, (m.get(r.ref) || 0) + 1);
+        if (r.tool === 'scan3d-viewer') vr.add(r.ref);
+      }
+      setResultCounts(m); setVolumeRefs(vr);
     }).catch(() => {});
     load();
     window.addEventListener('focus', load); // refresh after returning from a tool tab
     return () => window.removeEventListener('focus', load);
   }, []);
+
+  // Batch volume computation: run the same 3D-scan analysis the interactive
+  // viewer offers, across every scan entry that doesn't have a saved result
+  // yet, and write through the shared cose-results store — the Dashboard's
+  // existing "Analysis results summary" picks these up with no further wiring.
+  const [volumeProgress, setVolumeProgress] = useState<{ done: number; total: number } | null>(null);
+  const pendingVolume = useMemo(() => entries.filter(e => e.scanUrl && !volumeRefs.has(`${e.project}::${e.uuid}`)), [entries, volumeRefs]);
+  const runVolumeBatch = async () => {
+    if (!pendingVolume.length || volumeProgress) return;
+    aliveRef.current = true;
+    const queue = [...pendingVolume];
+    setVolumeProgress({ done: 0, total: queue.length });
+    let done = 0, idx = 0;
+    const worker = async () => {
+      while (idx < queue.length && aliveRef.current) {
+        const e = queue[idx++];
+        const ref = `${e.project}::${e.uuid}`;
+        try {
+          const format = formatFromName(e.scanUrl!);
+          if (format) {
+            const obj = await loadScan(e.scanUrl!, format);
+            const stats = computeStats(obj);
+            await putResult({ ref, imageUrl: e.scanUrl!, tool: 'scan3d-viewer', toolName: '3D Scan Viewer', metrics: metricsForStats(stats), generatedAt: new Date().toISOString() });
+            if (!aliveRef.current) return;
+            setVolumeRefs(prev => new Set(prev).add(ref));
+          }
+        } catch { /* skip unreadable/unsupported scan */ }
+        setVolumeProgress({ done: ++done, total: queue.length });
+      }
+    };
+    // Meshes can be tens of MB each — 2 concurrent keeps memory reasonable.
+    await Promise.all([worker(), worker()]);
+    if (aliveRef.current) setVolumeProgress(null);
+  };
 
   const projectsInView = useMemo(() => [...new Set(entries.map(e => e.project))], [entries]);
   const genotypesInView = useMemo(() => [...new Set(entries.map(genoOf).filter(Boolean))].sort(), [entries]);
@@ -169,6 +240,20 @@ export const Database: React.FC<Props> = ({ entries, query, loading, hasNext, sh
           ) : pendingContam.length > 0 ? (
             <button className="btn btn-sm btn-ghost" onClick={runContamBatch} title="Colour-heuristic screen for likely contamination across every loaded photo">
               <Biohazard size={14} /> Check contamination ({pendingContam.length})
+            </button>
+          ) : null}
+          {thermalProgress ? (
+            <span className="row muted" style={{ gap: 6, fontSize: '.82rem' }}><Loader2 className="spin" size={14} /> Reading {thermalProgress.done}/{thermalProgress.total}…</span>
+          ) : pendingThermal.length > 0 ? (
+            <button className="btn btn-sm btn-ghost" onClick={runThermalBatch} title="OCR the min/max °C off every thermal photo's colorbar">
+              <ScanText size={14} /> Read thermal data ({pendingThermal.length})
+            </button>
+          ) : null}
+          {volumeProgress ? (
+            <span className="row muted" style={{ gap: 6, fontSize: '.82rem' }}><Loader2 className="spin" size={14} /> Computing {volumeProgress.done}/{volumeProgress.total}…</span>
+          ) : pendingVolume.length > 0 ? (
+            <button className="btn btn-sm btn-ghost" onClick={runVolumeBatch} title="Compute volume/dimensions for every 3D scan and save the results">
+              <Ruler size={14} /> Compute volumes ({pendingVolume.length})
             </button>
           ) : null}
           <span className="muted" style={{ fontSize: '.82rem' }}>{filtered.length} shown</span>
@@ -272,7 +357,11 @@ export const Database: React.FC<Props> = ({ entries, query, loading, hasNext, sh
                     <div className="corner-badge">
                       {e.scanUrl ? <span className="badge info"><Box size={11} /> 3D scan</span>
                         : e.videoUrl ? <span className="badge info"><Film size={11} /> video</span>
-                        : e.mediaKind === 'thermal' ? <span className="badge info"><Thermometer size={11} /> thermal</span>
+                        : e.mediaKind === 'thermal' ? (
+                          e.thermal?.maxC != null
+                            ? <span className="badge info" title={`OCR read: ${e.thermal.minC ?? '?'}–${e.thermal.maxC}°C`}><Thermometer size={11} /> {e.thermal.minC ?? '?'}–{e.thermal.maxC}°C</span>
+                            : <span className="badge info"><Thermometer size={11} /> thermal</span>
+                        )
                         : e.marker?.markerFound ? <span className="badge pos"><CheckCircle2 size={11} /> marker</span> : e.marker ? <span className="badge neg">no marker</span> : null}
                     </div>
                     {resultCounts.get(`${e.project}::${e.uuid}`) ? (
@@ -300,7 +389,7 @@ export const Database: React.FC<Props> = ({ entries, query, loading, hasNext, sh
 
             {selected && (
               <div style={{ position: 'sticky', top: 74 }}>
-                <MarkerInspector entry={selected} onMarkerChanged={onMarkerChanged} onContaminationChanged={onContaminationChanged} onOpenTool={onOpenTool}
+                <MarkerInspector entry={selected} onMarkerChanged={onMarkerChanged} onContaminationChanged={onContaminationChanged} onThermalChanged={onThermalChanged} onOpenTool={onOpenTool}
                   onHide={onHideImage ? () => { onHideImage(selected); setSelectedId(null); } : undefined}
                   onDelete={onDeleteUpload && selected.cloud && (selected.cloud.owner === currentUserId || !!onHideImage)
                     ? () => { onDeleteUpload(selected); setSelectedId(null); } : undefined}

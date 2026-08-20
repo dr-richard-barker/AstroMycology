@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Database as DbIcon, UploadCloud, Share2, Info, Search, Menu, X, Sun, Moon, Sprout, AlertTriangle, BarChart3, Ruler, ClipboardList, BookText, ShieldCheck, LogOut, Library, Table } from 'lucide-react';
 import { TOOLS, toolById } from './tools';
-import type { Ec5Entry, MarkerAnalysis, CollectionStats } from './types';
+import type { Ec5Entry, MarkerAnalysis, CollectionStats, ThermalReading } from './types';
 import type { ContaminationResult } from './lib/contamination';
 import {
   fetchEntriesPage, fetchAllPage, getActive, setActive as persistActive, getProjects,
@@ -108,6 +108,8 @@ function AppInner({ auth }: { auth: AuthState }) {
     setEntries(prev => prev.map(e => (e.uuid === uuid ? { ...e, marker } : e)));
   const onContaminationChanged = (uuid: string, contamination: ContaminationResult | null) =>
     setEntries(prev => prev.map(e => (e.uuid === uuid ? { ...e, contamination } : e)));
+  const onThermalChanged = (uuid: string, thermal: ThermalReading | null) =>
+    setEntries(prev => prev.map(e => (e.uuid === uuid ? { ...e, thermal } : e)));
 
   const stats: CollectionStats = useMemo(() => ({
     total: entries.length,
@@ -232,7 +234,7 @@ function AppInner({ auth }: { auth: AuthState }) {
           )}
           {tab === 'database' ? (
             <Database entries={visibleEntries} query={query} loading={loading} hasNext={hasNext} showProject={active === ALL}
-              onLoadMore={() => load(active, page + 1, false)} onMarkerChanged={onMarkerChanged} onContaminationChanged={onContaminationChanged} onOpenTool={openTool} onHideImage={onHideImage}
+              onLoadMore={() => load(active, page + 1, false)} onMarkerChanged={onMarkerChanged} onContaminationChanged={onContaminationChanged} onThermalChanged={onThermalChanged} onOpenTool={openTool} onHideImage={onHideImage}
               currentUserId={currentUserId} onDeleteUpload={onDeleteUpload} />
           ) : tab === 'dashboard' ? (
             <Dashboard />

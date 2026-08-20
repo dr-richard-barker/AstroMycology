@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, UploadCloud, Save, Loader2, AlertTriangle, CheckCircle2, RotateCw } from 'lucide-react';
-import { createViewer, loadScan, computeStats, formatFromName, type MeshStats, type Viewer } from '../lib/threed';
+import { createViewer, loadScan, computeStats, formatFromName, metricsForStats, type MeshStats, type Viewer } from '../lib/threed';
 import { putResult } from '../lib/cose-results';
 
 interface Props {
@@ -56,19 +56,7 @@ export const Scan3DViewer: React.FC<Props> = ({ launch }) => {
 
   const save = async () => {
     if (!stats || !launch?.ref) return;
-    const metrics: Record<string, string | number> = {
-      Vertices: stats.vertexCount,
-      'Mesh parts': stats.parts,
-    };
-    if (stats.isPointCloudOnly) {
-      metrics['Type'] = 'Point cloud (no faces — volume/area not computable)';
-    } else {
-      metrics['Faces'] = stats.faceCount;
-      metrics['Dimensions'] = `${fmt(stats.dims.x)} × ${fmt(stats.dims.y)} × ${fmt(stats.dims.z)} mm`;
-      metrics['Volume'] = `${fmt((stats.volume || 0) / 1000, 2)} cm³`;
-      metrics['Surface area'] = `${fmt((stats.area || 0) / 100, 2)} cm²`;
-      metrics['Watertight'] = stats.watertight ? 'yes' : 'no (volume may be unreliable)';
-    }
+    const metrics = metricsForStats(stats);
     await putResult({
       ref: launch.ref, imageUrl: launch.imageUrl || '',
       tool: 'scan3d-viewer', toolName: '3D Scan Viewer',

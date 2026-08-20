@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart3, Loader2, Images, ImageIcon, Sprout, MapPin, CalendarRange, FolderTree, CheckCircle2, LineChart } from 'lucide-react';
+import { BarChart3, Loader2, Images, ImageIcon, Sprout, MapPin, CalendarRange, FolderTree, CheckCircle2, LineChart, TrendingUp, Thermometer } from 'lucide-react';
 import type { Ec5Entry } from '../types';
 import { fetchAllComplete, getProjects, projectName } from '../api/epicollect';
 import { allResults, type AnalysisResult } from '../lib/cose-results';
@@ -52,6 +52,7 @@ export const Dashboard: React.FC = () => {
     return () => window.removeEventListener('focus', load);
   }, []);
   const resultSummary = useMemo(() => summariseResults(toolResults, data), [toolResults, data]);
+  const growth = useMemo(() => growthAggregates(data, toolResults), [data, toolResults]);
 
   // Field explorer
   const [expProject, setExpProject] = useState<string>('');
@@ -140,6 +141,25 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
+      {growth.harvestRange && (
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(340px,1fr))', marginBottom: 16 }}>
+          {growth.volumeSeries.length > 0 && (
+            <div className="card pad">
+              <div className="card-title"><TrendingUp /> Volume by harvest</div>
+              <p className="muted" style={{ fontSize: '.78rem', marginTop: -6, marginBottom: 10 }}>Computed by the 3D-scan analysis (Database → "Compute volumes"), grouped by tube.</p>
+              <LineChartSvg series={growth.volumeSeries} xMin={growth.harvestRange[0]} xMax={growth.harvestRange[1]} yUnit="cm³" />
+            </div>
+          )}
+          {(growth.minSeries.length > 0 || growth.maxSeries.length > 0) && (
+            <div className="card pad">
+              <div className="card-title"><Thermometer /> Temperature range by harvest</div>
+              <p className="muted" style={{ fontSize: '.78rem', marginTop: -6, marginBottom: 10 }}>OCR-read off each thermal photo's colorbar (Database → "Read thermal data"); dashed = frame min, solid = frame max, one colour per tube.</p>
+              <LineChartSvg series={[...growth.maxSeries, ...growth.minSeries.map(s => ({ ...s, dashed: true }))]} xMin={growth.harvestRange[0]} xMax={growth.harvestRange[1]} yUnit="°C" />
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="card pad" style={{ marginBottom: 16 }}>
         <div className="card-title"><CalendarRange /> Entries over time</div>
         {agg.byMonth.length ? <MonthBars data={agg.byMonth} /> : <p className="muted" style={{ fontSize: '.85rem' }}>No dated entries.</p>}
@@ -215,6 +235,68 @@ const MonthBars: React.FC<{ data: { label: string; value: number }[] }> = ({ dat
           </span>
         </div>
       ))}
+    </div>
+  );
+};
+
+// ---- line chart (one polyline per series, x = integer harvest number) ----
+// Gaps in x are real (not every harvest/tube combination has data) — drawn as
+// broken segments rather than interpolated across, so the chart doesn't imply
+// data that isn't there.
+interface LineSeries { label: string; color: string; points: { x: number; y: number }[]; dashed?: boolean; }
+const LineChartSvg: React.FC<{ series: LineSeries[]; xMin: number; xMax: number; yUnit?: string }> = ({ series, xMin, xMax, yUnit }) => {
+  const W = 640, H = 240, padL = 40, padR = 14, padT = 12, padB = 26;
+  const c = readVars({ '--line': '#e5e9f0', '--muted': '#5a6473' });
+  const allY = series.flatMap(s => s.points.map(p => p.y));
+  const yMin = Math.min(0, ...allY, 0);
+  const yMax = Math.max(1, ...allY) * 1.1;
+  const xOf = (v: number) => padL + (xMax > xMin ? (v - xMin) / (xMax - xMin) : 0.5) * (W - padL - padR);
+  const yOf = (v: number) => H - padB - ((v - yMin) / Math.max(1e-9, yMax - yMin)) * (H - padT - padB);
+
+  // Contiguous runs only (no line drawn across a missing harvest).
+  const runsOf = (points: { x: number; y: number }[]) => {
+    const sorted = [...points].sort((a, b) => a.x - b.x);
+    const runs: { x: number; y: number }[][] = [];
+    for (const p of sorted) {
+      const last = runs[runs.length - 1];
+      if (last && p.x === last[last.length - 1].x + 1) last.push(p);
+      else runs.push([p]);
+    }
+    return runs;
+  };
+
+  const ticks = Array.from({ length: Math.max(0, xMax - xMin) + 1 }, (_, i) => xMin + i);
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 380, display: 'block' }}>
+        {ticks.map(v => (
+          <g key={v}>
+            <line x1={xOf(v)} y1={padT} x2={xOf(v)} y2={H - padB} stroke={c['--line']} strokeWidth={0.5} />
+            <text x={xOf(v)} y={H - padB + 13} fontSize={9} textAnchor="middle" fill={c['--muted']}>{v}</text>
+          </g>
+        ))}
+        <text x={W / 2} y={H - 2} fontSize={9} textAnchor="middle" fill={c['--muted']}>harvest #</text>
+        {series.map((s, si) => (
+          <g key={si}>
+            {runsOf(s.points).map((run, ri) => (
+              <polyline key={ri} points={run.map(p => `${xOf(p.x)},${yOf(p.y)}`).join(' ')} fill="none" stroke={s.color} strokeWidth={2} strokeDasharray={s.dashed ? '4 3' : undefined} />
+            ))}
+            {s.points.map((p, pi) => (
+              <circle key={pi} cx={xOf(p.x)} cy={yOf(p.y)} r={2.6} fill={s.color}>
+                <title>{`${s.label} · Harvest ${p.x}: ${p.y.toFixed(2)}${yUnit ? ' ' + yUnit : ''}`}</title>
+              </circle>
+            ))}
+          </g>
+        ))}
+      </svg>
+      <div className="row wrap" style={{ gap: 10, marginTop: 6 }}>
+        {series.map((s, i) => (
+          <span key={i} className="row muted" style={{ gap: 4, alignItems: 'center', fontSize: '.72rem' }}>
+            <span style={{ width: 14, height: 0, borderTop: `2px ${s.dashed ? 'dashed' : 'solid'} ${s.color}`, display: 'inline-block' }} /> {s.label}
+          </span>
+        ))}
+      </div>
     </div>
   );
 };
@@ -356,6 +438,64 @@ function fillMonths(m: Map<string, number>): { label: string; value: number }[] 
     mo++; if (mo > 12) { mo = 1; y++; }
   }
   return out;
+}
+
+// Pulls "Harvest 5 · Tube 1" (the tube-time-series-2024 dataset's `treatment`
+// convention) out of an entry's fields. Generic — entries without a matching
+// field just don't participate in the harvest trend charts below.
+function harvestTubeOf(e: Ec5Entry): { harvest: number; tube: number } | null {
+  const f = e.fields.find(f => f.name.toLowerCase() === 'treatment');
+  if (!f) return null;
+  const m = f.value.match(/harvest\s*(\d+)\s*[·:]\s*tube\s*(\d+)/i);
+  return m ? { harvest: parseInt(m[1], 10), tube: parseInt(m[2], 10) } : null;
+}
+
+// Volume (from the 3D-scan batch analysis, joined through the shared
+// cose-results store) and thermal min/max (already on the entry, from the
+// thermal-OCR batch), grouped by tube and harvest number, averaged when a
+// tube/harvest has more than one reading. Missing harvest/tube combinations
+// are simply absent — LineChartSvg draws that as a gap, not an interpolation.
+function growthAggregates(entries: Ec5Entry[], toolResults: AnalysisResult[]) {
+  const volumeByRef = new Map(toolResults.filter(r => r.tool === 'scan3d-viewer').map(r => [r.ref, r]));
+  const volumeByTube = new Map<number, Map<number, number[]>>();
+  const minByTube = new Map<number, Map<number, number[]>>();
+  const maxByTube = new Map<number, Map<number, number[]>>();
+  const bump = (store: Map<number, Map<number, number[]>>, tube: number, harvest: number, v: number) => {
+    if (!store.has(tube)) store.set(tube, new Map());
+    const byHarvest = store.get(tube)!;
+    if (!byHarvest.has(harvest)) byHarvest.set(harvest, []);
+    byHarvest.get(harvest)!.push(v);
+  };
+
+  const harvestNumbers: number[] = [];
+  for (const e of entries) {
+    const ht = harvestTubeOf(e);
+    if (!ht) continue;
+    harvestNumbers.push(ht.harvest);
+    if (e.scanUrl) {
+      const raw = volumeByRef.get(`${e.project}::${e.uuid}`)?.metrics['Volume'];
+      const v = raw != null ? parseFloat(String(raw)) : NaN;
+      if (!Number.isNaN(v)) bump(volumeByTube, ht.tube, ht.harvest, v);
+    }
+    if (e.mediaKind === 'thermal' && e.thermal) {
+      if (e.thermal.minC != null) bump(minByTube, ht.tube, ht.harvest, e.thermal.minC);
+      if (e.thermal.maxC != null) bump(maxByTube, ht.tube, ht.harvest, e.thermal.maxC);
+    }
+  }
+
+  const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const toSeries = (store: Map<number, Map<number, number[]>>): LineSeries[] =>
+    [...store.entries()].sort((a, b) => a[0] - b[0]).map(([tube, byHarvest], i) => ({
+      label: `Tube ${tube}`, color: PALETTE[i % PALETTE.length],
+      points: [...byHarvest.entries()].sort((a, b) => a[0] - b[0]).map(([h, vals]) => ({ x: h, y: avg(vals) })),
+    }));
+
+  return {
+    harvestRange: harvestNumbers.length ? [Math.min(...harvestNumbers), Math.max(...harvestNumbers)] as [number, number] : null,
+    volumeSeries: toSeries(volumeByTube),
+    minSeries: toSeries(minByTube),
+    maxSeries: toSeries(maxByTube),
+  };
 }
 
 // Aggregate tool results across the loaded (and project-toggle-enabled) images:

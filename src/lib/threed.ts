@@ -126,6 +126,27 @@ export function computeStats(root: THREE.Object3D): MeshStats {
   };
 }
 
+// Shared metric formatting for a computed MeshStats — used both by the
+// interactive Scan3DViewer's "Save to this entry" and the Database's batch
+// "Compute volumes" action, so the two produce identical result records.
+const fmtStat = (n: number, d = 1) => n.toLocaleString(undefined, { maximumFractionDigits: d });
+export function metricsForStats(stats: MeshStats): Record<string, string | number> {
+  const metrics: Record<string, string | number> = {
+    Vertices: stats.vertexCount,
+    'Mesh parts': stats.parts,
+  };
+  if (stats.isPointCloudOnly) {
+    metrics['Type'] = 'Point cloud (no faces — volume/area not computable)';
+  } else {
+    metrics['Faces'] = stats.faceCount;
+    metrics['Dimensions'] = `${fmtStat(stats.dims.x)} × ${fmtStat(stats.dims.y)} × ${fmtStat(stats.dims.z)} mm`;
+    metrics['Volume'] = `${fmtStat((stats.volume || 0) / 1000, 2)} cm³`;
+    metrics['Surface area'] = `${fmtStat((stats.area || 0) / 100, 2)} cm²`;
+    metrics['Watertight'] = stats.watertight ? 'yes' : 'no (volume may be unreliable)';
+  }
+  return metrics;
+}
+
 // ---- viewer scaffold: scene, camera, orbit controls, resize + render loop ----
 export interface Viewer {
   setObject(obj: THREE.Object3D): void;

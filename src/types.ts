@@ -4,6 +4,21 @@
 
 import type { ContaminationResult } from './lib/contamination';
 
+// User-controlled display rotation (RotatableImg) — distinct from
+// MarkerAnalysis.rotationDeg below, which is the detected in-plane rotation
+// of the calibration marker itself, not a user preference.
+export type RotationDeg = 0 | 90 | 180 | 270;
+
+export interface ThermalReading {
+  minC: number | null;      // frame minimum, °C — from the colorbar's low-end label
+  maxC: number | null;      // frame maximum, °C — from the colorbar's high-end label
+  rotationDeg: RotationDeg; // the rotation OCR found this reading at (auto-detected best of 4)
+  confidence: number;       // 0-100, OCR confidence (lower after a manual edit is not tracked — see overridden)
+  ocrText: string;          // raw OCR output per crop, kept for manual review/debugging
+  analyzedAt: string;
+  overridden?: boolean;     // true once a human has corrected minC/maxC
+}
+
 export interface Pt { x: number; y: number; }
 
 export type MarkerCorners = [Pt, Pt, Pt, Pt];
@@ -50,6 +65,8 @@ export interface Ec5Entry {
   gps: { lat: number; lng: number } | null;
   marker: MarkerAnalysis | null; // hydrated from local cache
   contamination?: ContaminationResult | null; // hydrated from local cache
+  thermal?: ThermalReading | null;   // hydrated from local cache (thermal entries only)
+  displayRotation?: RotationDeg;     // hydrated from local cache — user's manual rotate-button choice
   cloud?: { owner: string; path: string }; // present on shared cloud uploads (for owner delete)
 }
 

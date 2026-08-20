@@ -1,18 +1,20 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Crosshair, Scale, RotateCw, Sparkles, Save, Edit3, Loader2, Eraser, MapPin, Camera, ExternalLink, LineChart, Film, Box, Download, EyeOff, Trash2, Biohazard, ScanSearch } from 'lucide-react';
-import type { Ec5Entry, MarkerAnalysis, Pt } from '../types';
+import { Crosshair, Scale, RotateCw, Sparkles, Save, Edit3, Loader2, Eraser, MapPin, Camera, ExternalLink, LineChart, Film, Box, Download, EyeOff, Trash2, Biohazard, ScanSearch, Thermometer, ScanText } from 'lucide-react';
+import type { Ec5Entry, MarkerAnalysis, Pt, RotationDeg, ThermalReading } from '../types';
 import { urlToImageData } from '../lib/capture';
 import { analyzeMarker, analyzeFromQuad } from '../lib/detect';
 import { analyzeContamination, type ContaminationResult, type ContaminationVerdict } from '../lib/contamination';
-import { saveMarker, clearMarker, saveContamination } from '../api/epicollect';
+import { extractThermalReading } from '../lib/thermal';
+import { saveMarker, clearMarker, saveContamination, saveThermalReading, saveRotation } from '../api/epicollect';
 import { getResults, type AnalysisResult } from '../lib/cose-results';
 import { QuadAnnotator } from './QuadAnnotator';
-import { SmartImg } from './SmartImg';
+import { RotatableImg } from './RotatableImg';
 
 interface Props {
   entry: Ec5Entry;
   onMarkerChanged: (uuid: string, marker: MarkerAnalysis | null) => void;
   onContaminationChanged?: (uuid: string, contamination: ContaminationResult | null) => void;
+  onThermalChanged?: (uuid: string, thermal: ThermalReading | null) => void;
   onOpenTool: (id: string, imageUrl: string, ref: string) => void;
   onHide?: () => void;    // admin-only: exclude this image
   onDelete?: () => void;  // delete a shared cloud upload (owner or admin)
@@ -36,7 +38,7 @@ const DEFAULT_QUAD: [Pt, Pt, Pt, Pt] = [
   { x: 0.35, y: 0.35 }, { x: 0.65, y: 0.35 }, { x: 0.65, y: 0.6 }, { x: 0.35, y: 0.6 },
 ];
 
-export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onContaminationChanged, onOpenTool, onHide, onDelete, deleteIsOwn }) => {
+export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onContaminationChanged, onThermalChanged, onOpenTool, onHide, onDelete, deleteIsOwn }) => {
   const slug = entry.project;
   const ref = `${entry.project}::${entry.uuid}`;
 
@@ -53,6 +55,10 @@ export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onCon
   const [marker, setMarker] = useState<MarkerAnalysis | null>(entry.marker);
   const [contam, setContam] = useState<ContaminationResult | null>(entry.contamination ?? null);
   const [contamBusy, setContamBusy] = useState(false);
+  const [rotation, setRotation] = useState<RotationDeg>(entry.displayRotation ?? 0);
+  const [thermal, setThermal] = useState<ThermalReading | null>(entry.thermal ?? null);
+  const [thermalBusy, setThermalBusy] = useState(false);
+  const [thermalErr, setThermalErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [annotate, setAnnotate] = useState(false);
   const [quad, setQuad] = useState<[Pt, Pt, Pt, Pt]>(DEFAULT_QUAD);
@@ -65,6 +71,7 @@ export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onCon
 
   useEffect(() => {
     setMarker(entry.marker); setContam(entry.contamination ?? null); setAnnotate(false); setDirty(false); setImgData(null); setErr(null);
+    setRotation(entry.displayRotation ?? 0); setThermal(entry.thermal ?? null); setThermalErr(null);
     if (!entry.photoUrl) return;
     let alive = true;
     urlToImageData(entry.photoUrl).then(id => {
@@ -125,6 +132,32 @@ export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onCon
     onContaminationChanged?.(entry.uuid, result);
   };
 
+  const onRotate = (deg: RotationDeg) => {
+    setRotation(deg);
+    saveRotation(slug, entry.uuid, deg);
+  };
+
+  const runThermalOcr = async () => {
+    if (!entry.photoUrl) return;
+    setThermalBusy(true); setThermalErr(null);
+    try {
+      const reading = await extractThermalReading(entry.photoUrl);
+      setThermal(reading);
+      saveThermalReading(slug, entry.uuid, reading);
+      onThermalChanged?.(entry.uuid, reading);
+    } catch (e) {
+      setThermalErr(e instanceof Error ? e.message : String(e));
+    } finally { setThermalBusy(false); }
+  };
+  const updateThermalField = (field: 'minC' | 'maxC', raw: string) => {
+    if (!thermal) return;
+    const n = raw === '' ? null : parseFloat(raw);
+    const next: ThermalReading = { ...thermal, [field]: Number.isNaN(n as number) ? null : n, overridden: true };
+    setThermal(next);
+    saveThermalReading(slug, entry.uuid, next);
+    onThermalChanged?.(entry.uuid, next);
+  };
+
   const overlayQuad = marker?.corners ? cornersToFrac(marker.corners, dims.current.w, dims.current.h) : null;
 
   return (
@@ -178,14 +211,14 @@ export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onCon
           </>
         ) : (
           <div style={{ position: 'relative' }}>
-            <SmartImg src={entry.photoUrl} alt={entry.title} crossOrigin="anonymous" style={{ display: 'block', width: '100%', borderRadius: 8 }} />
-            {overlayQuad && (
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+            <RotatableImg src={entry.photoUrl} alt={entry.title} crossOrigin="anonymous" rotationDeg={rotation} onRotationChange={onRotate} />
+            {overlayQuad && rotation === 0 && (
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 460, pointerEvents: 'none' }}>
                 <polygon points={overlayQuad.map(p => `${p.x * 100},${p.y * 100}`).join(' ')} style={{ fill: 'var(--accent2)', stroke: 'var(--accent2)' }} fillOpacity={0.18} strokeWidth="0.6" vectorEffect="non-scaling-stroke" />
               </svg>
             )}
             {!imgData && !err && (
-              <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,.25)', borderRadius: 8 }}><Loader2 className="spin" color="#fff" /></div>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 460, display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,.25)', borderRadius: 8 }}><Loader2 className="spin" color="#fff" /></div>
             )}
           </div>
         )}
@@ -235,6 +268,7 @@ export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onCon
         )}
       </div>
 
+      {entry.mediaKind !== 'thermal' && (
       <div className="card pad">
         <div className="card-title sb" style={{ justifyContent: 'space-between' }}>
           <span className="row" style={{ gap: 8 }}><Biohazard /> Contamination screen</span>
@@ -278,6 +312,49 @@ export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onCon
           </>
         )}
       </div>
+      )}
+
+      {entry.mediaKind === 'thermal' && (
+      <div className="card pad">
+        <div className="card-title sb" style={{ justifyContent: 'space-between' }}>
+          <span className="row" style={{ gap: 8 }}><Thermometer /> Thermal reading</span>
+          {entry.photoUrl && (
+            <button className="btn btn-sm btn-ghost" disabled={thermalBusy} onClick={runThermalOcr}>
+              {thermalBusy ? <Loader2 className="spin" /> : <ScanText size={14} />} {thermal ? 'Re-read' : 'Read with OCR'}
+            </button>
+          )}
+        </div>
+        {thermalErr && <p style={{ color: 'var(--danger)', fontSize: '.82rem', marginBottom: 8 }}>{thermalErr}</p>}
+        {!thermal ? (
+          <p className="muted" style={{ fontSize: '.86rem' }}>Reads the temperature range straight off the colorbar printed in the image — tries all 4 rotations and keeps the clearest read. First-pass OCR, not a certified reading — check the numbers against what's visibly printed.</p>
+        ) : (
+          <>
+            <div className="stat-row" style={{ marginBottom: 10 }}>
+              <div className="stat">
+                <div className="k">Min</div>
+                <div className="v accent">
+                  <input type="number" step="0.1" value={thermal.minC ?? ''} onChange={e => updateThermalField('minC', e.target.value)}
+                    style={{ width: 64, font: 'inherit', color: 'inherit', background: 'transparent', border: '1px solid var(--line)', borderRadius: 6, padding: '2px 4px' }} />
+                  <span style={{ fontSize: '.8rem' }}> °C</span>
+                </div>
+              </div>
+              <div className="stat">
+                <div className="k">Max</div>
+                <div className="v accent">
+                  <input type="number" step="0.1" value={thermal.maxC ?? ''} onChange={e => updateThermalField('maxC', e.target.value)}
+                    style={{ width: 64, font: 'inherit', color: 'inherit', background: 'transparent', border: '1px solid var(--line)', borderRadius: 6, padding: '2px 4px' }} />
+                  <span style={{ fontSize: '.8rem' }}> °C</span>
+                </div>
+              </div>
+            </div>
+            {thermal.overridden
+              ? <span className="chip tag" style={{ fontSize: '.7rem' }}>manually corrected</span>
+              : <span className="muted" style={{ fontSize: '.72rem' }}>OCR confidence {thermal.confidence}% · read at {thermal.rotationDeg}° rotation</span>}
+            <p className="muted" style={{ fontSize: '.72rem', marginTop: 8 }}>Edit the values above if the OCR misread them — corrections are saved and included in exports.</p>
+          </>
+        )}
+      </div>
+      )}
 
       {results.length > 0 && (
         <div className="card pad">

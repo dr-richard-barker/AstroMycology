@@ -8,7 +8,7 @@
 // Supports several projects: a built-in list plus any the user adds, browsed one
 // at a time or merged with "All".
 
-import type { Ec5Entry, EntryField, MarkerAnalysis } from '../types';
+import type { Ec5Entry, EntryField, MarkerAnalysis, ThermalReading, RotationDeg } from '../types';
 import { fetchGithubFolder, parseGhId, ghUrl, parseFilenameMeta, metaFor, type GhTarget, type GhFile } from './github';
 import { loadLocalEntries, deleteLocalSource } from '../lib/localsource';
 import { authConfigured } from '../lib/supabase';
@@ -459,6 +459,40 @@ export function clearContamination(slug: string, uuid: string) {
   try { localStorage.removeItem(contamKey(slug, uuid)); } catch { /* ignore */ }
 }
 
+// ---- local thermal-reading cache (same pattern as marker analysis) ----
+const thermalKey = (slug: string, uuid: string) => `ec5-thermal:${slug}:${uuid}`;
+
+export function loadThermalReading(slug: string, uuid: string): ThermalReading | null {
+  try { const s = localStorage.getItem(thermalKey(slug, uuid)); return s ? JSON.parse(s) : null; }
+  catch { return null; }
+}
+export function saveThermalReading(slug: string, uuid: string, reading: ThermalReading) {
+  try { localStorage.setItem(thermalKey(slug, uuid), JSON.stringify(reading)); } catch { /* quota */ }
+}
+export function clearThermalReading(slug: string, uuid: string) {
+  try { localStorage.removeItem(thermalKey(slug, uuid)); } catch { /* ignore */ }
+}
+
+// ---- local display-rotation cache (the rotate button's persistence) ----
+const rotationKey = (slug: string, uuid: string) => `ec5-rotation:${slug}:${uuid}`;
+
+export function loadRotation(slug: string, uuid: string): RotationDeg {
+  try { const s = localStorage.getItem(rotationKey(slug, uuid)); const n = s ? parseInt(s, 10) : 0; return (n === 90 || n === 180 || n === 270) ? n : 0; }
+  catch { return 0; }
+}
+export function saveRotation(slug: string, uuid: string, deg: RotationDeg) {
+  try {
+    if (deg === 0) localStorage.removeItem(rotationKey(slug, uuid));
+    else localStorage.setItem(rotationKey(slug, uuid), String(deg));
+  } catch { /* quota */ }
+}
+
 function hydrate(entries: Ec5Entry[]): Ec5Entry[] {
-  return entries.map(e => ({ ...e, marker: loadMarker(e.project, e.uuid), contamination: loadContamination(e.project, e.uuid) }));
+  return entries.map(e => ({
+    ...e,
+    marker: loadMarker(e.project, e.uuid),
+    contamination: loadContamination(e.project, e.uuid),
+    thermal: loadThermalReading(e.project, e.uuid),
+    displayRotation: loadRotation(e.project, e.uuid),
+  }));
 }
