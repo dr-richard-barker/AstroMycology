@@ -53,6 +53,7 @@ export const Dashboard: React.FC = () => {
   }, []);
   const resultSummary = useMemo(() => summariseResults(toolResults, data), [toolResults, data]);
   const growth = useMemo(() => growthAggregates(data, toolResults), [data, toolResults]);
+  const dist = useMemo(() => distributionAggregates(data, toolResults), [data, toolResults]);
 
   // Field explorer
   const [expProject, setExpProject] = useState<string>('');
@@ -155,6 +156,33 @@ export const Dashboard: React.FC = () => {
               <div className="card-title"><Thermometer /> Temperature range by harvest</div>
               <p className="muted" style={{ fontSize: '.78rem', marginTop: -6, marginBottom: 10 }}>OCR-read off each thermal photo's colorbar (Database → "Read thermal data"); dashed = frame min, solid = frame max, one colour per tube.</p>
               <LineChartSvg series={[...growth.maxSeries, ...growth.minSeries.map(s => ({ ...s, dashed: true }))]} xMin={growth.harvestRange[0]} xMax={growth.harvestRange[1]} yUnit="°C" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {(dist.thermalMin.length > 0 || dist.thermalMax.length > 0 || dist.volumes.length > 0) && (
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(340px,1fr))', marginBottom: 16 }}>
+          {(dist.thermalMin.length > 0 || dist.thermalMax.length > 0) && (
+            <div className="card pad">
+              <div className="card-title"><Thermometer /> Temperature distribution</div>
+              <p className="muted" style={{ fontSize: '.78rem', marginTop: -6, marginBottom: 10 }}>Every OCR-read frame min/max across the loaded thermal photos, binned.</p>
+              <StatsRow values={[...dist.thermalMin, ...dist.thermalMax]} unit="°C" />
+              <HistogramSvg
+                unit="°C"
+                series={[
+                  { label: 'Frame min', color: PALETTE[4 % PALETTE.length], values: dist.thermalMin },
+                  { label: 'Frame max', color: PALETTE[0], values: dist.thermalMax },
+                ]}
+              />
+            </div>
+          )}
+          {dist.volumes.length > 0 && (
+            <div className="card pad">
+              <div className="card-title"><TrendingUp /> Volume distribution</div>
+              <p className="muted" style={{ fontSize: '.78rem', marginTop: -6, marginBottom: 10 }}>Every computed 3D-scan volume across the loaded entries, binned.</p>
+              <StatsRow values={dist.volumes} unit=" cm³" />
+              <HistogramSvg unit="cm³" series={[{ label: 'Volume', color: PALETTE[2 % PALETTE.length], values: dist.volumes }]} />
             </div>
           )}
         </div>
@@ -297,6 +325,95 @@ const LineChartSvg: React.FC<{ series: LineSeries[]; xMin: number; xMax: number;
           </span>
         ))}
       </div>
+    </div>
+  );
+};
+
+// ---- histogram (grouped bars per bin, one or more overlaid series) ----
+// Rounds a raw bin width up to a "nice" 1/2/5×10^n step so bin edges land on
+// sensible numbers instead of e.g. 1.73°C.
+function niceStep(raw: number): number {
+  if (!(raw > 0)) return 1;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
+  return nice * mag;
+}
+
+interface HistSeries { label: string; color: string; values: number[]; }
+const HistogramSvg: React.FC<{ series: HistSeries[]; unit?: string; targetBins?: number }> = ({ series, unit, targetBins = 7 }) => {
+  const all = series.flatMap(s => s.values);
+  const c = readVars({ '--line': '#e5e9f0', '--muted': '#5a6473' });
+  if (!all.length) return <p className="muted" style={{ fontSize: '.85rem' }}>No data yet.</p>;
+
+  const step = niceStep((Math.max(...all) - Math.min(...all)) / targetBins || 1);
+  const lo = Math.floor(Math.min(...all) / step) * step;
+  const hi = Math.ceil(Math.max(...all) / step) * step;
+  const nBins = Math.max(1, Math.round((hi - lo) / step));
+  const binned = series.map(s => {
+    const counts = new Array(nBins).fill(0);
+    for (const v of s.values) counts[Math.min(nBins - 1, Math.max(0, Math.floor((v - lo) / step)))]++;
+    return { ...s, counts };
+  });
+  const maxCount = Math.max(1, ...binned.flatMap(b => b.counts));
+
+  const W = 640, H = 220, padL = 28, padR = 10, padT = 10, padB = 28;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const groupW = plotW / nBins;
+  const gap = 2;
+  const barW = Math.max(1, (groupW - gap * (binned.length + 1)) / binned.length);
+  const tickEvery = Math.max(1, Math.ceil(nBins / 8));
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 380, display: 'block' }}>
+        {binned.map((s, si) => s.counts.map((count, bi) => {
+          if (!count) return null;
+          const x = padL + bi * groupW + gap + si * (barW + gap);
+          const h = (count / maxCount) * plotH;
+          return (
+            <rect key={`${si}-${bi}`} x={x} y={H - padB - h} width={barW} height={h} fill={s.color} rx={1}>
+              <title>{`${s.label}: ${count} in [${(lo + bi * step).toFixed(1)}, ${(lo + (bi + 1) * step).toFixed(1)})${unit ? ' ' + unit : ''}`}</title>
+            </rect>
+          );
+        }))}
+        {Array.from({ length: nBins + 1 }, (_, i) => i).filter(i => i % tickEvery === 0).map(i => (
+          <text key={i} x={padL + i * groupW} y={H - padB + 12} fontSize={8} textAnchor="middle" fill={c['--muted']}>{(lo + i * step).toFixed(step < 1 ? 1 : 0)}</text>
+        ))}
+        <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke={c['--line']} strokeWidth={0.75} />
+      </svg>
+      <div className="row wrap" style={{ gap: 10, marginTop: 6 }}>
+        {series.map((s, i) => (
+          <span key={i} className="row muted" style={{ gap: 4, alignItems: 'center', fontSize: '.72rem' }}>
+            <span style={{ width: 9, height: 9, borderRadius: 2, background: s.color, display: 'inline-block' }} /> {s.label} (n={s.values.length})
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ---- descriptive stats row (n / mean / median / range) ----
+function basicStats(values: number[]) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const n = sorted.length;
+  const mean = sorted.reduce((a, b) => a + b, 0) / n;
+  const median = n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+  const std = Math.sqrt(sorted.reduce((a, b) => a + (b - mean) ** 2, 0) / n);
+  return { n, mean, median, std, min: sorted[0], max: sorted[n - 1] };
+}
+const StatsRow: React.FC<{ values: number[]; unit?: string; digits?: number }> = ({ values, unit = '', digits = 1 }) => {
+  const s = basicStats(values);
+  if (!s) return null;
+  const f = (n: number) => n.toFixed(digits);
+  return (
+    <div className="row wrap muted" style={{ gap: 12, fontSize: '.74rem', marginBottom: 8 }}>
+      <span>n={s.n}</span>
+      <span>mean {f(s.mean)}{unit}</span>
+      <span>median {f(s.median)}{unit}</span>
+      <span>range {f(s.min)}–{f(s.max)}{unit}</span>
+      <span>σ {f(s.std)}{unit}</span>
     </div>
   );
 };
@@ -496,6 +613,24 @@ function growthAggregates(entries: Ec5Entry[], toolResults: AnalysisResult[]) {
     minSeries: toSeries(minByTube),
     maxSeries: toSeries(maxByTube),
   };
+}
+
+// Flat pools (not grouped by harvest/tube) of every thermal min/max reading
+// and every computed scan volume across the currently-visible entries — the
+// distribution shapes behind the "by harvest" trend lines above.
+function distributionAggregates(entries: Ec5Entry[], toolResults: AnalysisResult[]) {
+  const enabled = new Set(entries.map(e => `${e.project}::${e.uuid}`));
+  const thermalMin: number[] = [], thermalMax: number[] = [];
+  for (const e of entries) {
+    if (e.mediaKind !== 'thermal' || !e.thermal) continue;
+    if (e.thermal.minC != null) thermalMin.push(e.thermal.minC);
+    if (e.thermal.maxC != null) thermalMax.push(e.thermal.maxC);
+  }
+  const volumes = toolResults
+    .filter(r => r.tool === 'scan3d-viewer' && enabled.has(r.ref))
+    .map(r => parseFloat(String(r.metrics['Volume'])))
+    .filter(v => !Number.isNaN(v));
+  return { thermalMin, thermalMax, volumes };
 }
 
 // Aggregate tool results across the loaded (and project-toggle-enabled) images:
