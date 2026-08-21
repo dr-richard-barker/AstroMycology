@@ -482,7 +482,7 @@ const WorldMap: React.FC<{
         {world && world.map(f => {
           const n = countryCounts.get(f.name) || 0;
           return (
-            <path key={f.id} d={featurePath(f, x, y)} fill={fillFor(f.name)} stroke={n ? mix(fillFor(f.name), '#000000', 0.28) : c['--card']} strokeWidth={n ? 0.5 : 0.4} strokeLinejoin="round">
+            <path key={f.name} d={featurePath(f, x, y)} fill={fillFor(f.name)} stroke={n ? mix(fillFor(f.name), '#000000', 0.28) : c['--card']} strokeWidth={n ? 0.5 : 0.4} strokeLinejoin="round">
               <title>{`${f.name}: ${n} image${n === 1 ? '' : 's'}`}</title>
             </path>
           );
