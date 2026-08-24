@@ -21,7 +21,7 @@ interface Props {
   onMarkerChanged: (uuid: string, marker: MarkerAnalysis | null) => void;
   onContaminationChanged: (uuid: string, contamination: ContaminationResult | null) => void;
   onThermalChanged: (uuid: string, thermal: ThermalReading | null) => void;
-  onOpenTool: (id: string, imageUrl: string, ref: string) => void;
+  onOpenTool: (id: string, imageUrl: string, ref: string, name?: string) => void;
   onHideImage?: (e: Ec5Entry) => void;   // admin-only: exclude an image
   currentUserId?: string;                // signed-in user (for owner delete)
   onDeleteUpload?: (e: Ec5Entry) => void; // delete a shared cloud upload
@@ -164,7 +164,10 @@ export const Database: React.FC<Props> = ({ entries, query, loading, hasNext, sh
         const e = queue[idx++];
         const ref = `${e.project}::${e.uuid}`;
         try {
-          const format = formatFromName(e.scanUrl!);
+          // Prefer the entry's real filename over the URL: a local upload's
+          // scanUrl is an extension-less blob: URL, so format detection off
+          // the URL alone fails for anything not GitHub-hosted.
+          const format = formatFromName(e.title || e.scanUrl!);
           if (format) {
             const obj = await loadScan(e.scanUrl!, format);
             const stats = computeStats(obj);

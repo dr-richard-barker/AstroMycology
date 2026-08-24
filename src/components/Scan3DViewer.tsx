@@ -6,8 +6,10 @@ import { putResult } from '../lib/cose-results';
 interface Props {
   // Reuses the same shape App.tsx hands every tool: `imageUrl` here carries the
   // scan's URL (from a database entry's `scanUrl`), `ref` is the stable
-  // `${project}::${uuid}` key results get written back to.
-  launch: { imageUrl?: string; ref?: string } | null;
+  // `${project}::${uuid}` key results get written back to, `name` is the
+  // entry's real filename — needed for format detection since a local
+  // upload's `imageUrl` is an extension-less blob: URL.
+  launch: { imageUrl?: string; ref?: string; name?: string } | null;
 }
 
 const fmt = (n: number, d = 1) => n.toLocaleString(undefined, { maximumFractionDigits: d });
@@ -45,7 +47,7 @@ export const Scan3DViewer: React.FC<Props> = ({ launch }) => {
   }, []);
 
   useEffect(() => {
-    if (launch?.imageUrl) load(launch.imageUrl, decodeURIComponent(launch.imageUrl).split('/').pop()?.split('?')[0] || 'scan.ply');
+    if (launch?.imageUrl) load(launch.imageUrl, launch.name || decodeURIComponent(launch.imageUrl).split('/').pop()?.split('?')[0] || 'scan.ply');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [launch?.imageUrl]);
 

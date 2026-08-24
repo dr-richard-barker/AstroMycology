@@ -15,7 +15,7 @@ interface Props {
   onMarkerChanged: (uuid: string, marker: MarkerAnalysis | null) => void;
   onContaminationChanged?: (uuid: string, contamination: ContaminationResult | null) => void;
   onThermalChanged?: (uuid: string, thermal: ThermalReading | null) => void;
-  onOpenTool: (id: string, imageUrl: string, ref: string) => void;
+  onOpenTool: (id: string, imageUrl: string, ref: string, name?: string) => void;
   onHide?: () => void;    // admin-only: exclude this image
   onDelete?: () => void;  // delete a shared cloud upload (owner or admin)
   deleteIsOwn?: boolean;  // true if the current user owns this upload
@@ -166,7 +166,7 @@ export const MarkerInspector: React.FC<Props> = ({ entry, onMarkerChanged, onCon
         <div className="card pad">
           <div className="card-title"><Box /> 3D scan</div>
           <p className="muted" style={{ fontSize: '.86rem', marginBottom: 10 }}>This entry is a 3D scan ({entry.scanUrl.split('.').pop()?.toUpperCase()}) — open it in the 3D viewer for an orbitable render plus volume, dimensions and surface area.</p>
-          <button className="btn btn-primary btn-sm" onClick={() => onOpenTool('scan3d-viewer', entry.scanUrl!, ref)}>
+          <button className="btn btn-primary btn-sm" onClick={() => onOpenTool('scan3d-viewer', entry.scanUrl!, ref, entry.title)}>
             <Box size={14} /> Open 3D viewer
           </button>
         </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart3, Loader2, Images, ImageIcon, Sprout, MapPin, CalendarRange, FolderTree, CheckCircle2, LineChart, TrendingUp, Thermometer } from 'lucide-react';
+import { BarChart3, Loader2, Images, ImageIcon, Sprout, MapPin, CalendarRange, FolderTree, CheckCircle2, LineChart, TrendingUp, Thermometer, ArrowRightLeft } from 'lucide-react';
 import type { Ec5Entry } from '../types';
 import { fetchAllComplete, getProjects, projectName } from '../api/epicollect';
 import { allResults, type AnalysisResult } from '../lib/cose-results';
@@ -54,6 +54,7 @@ export const Dashboard: React.FC = () => {
   const resultSummary = useMemo(() => summariseResults(toolResults, data), [toolResults, data]);
   const growth = useMemo(() => growthAggregates(data, toolResults), [data, toolResults]);
   const dist = useMemo(() => distributionAggregates(data, toolResults), [data, toolResults]);
+  const prePost = useMemo(() => prePostAggregates(data, toolResults), [data, toolResults]);
 
   // Field explorer
   const [expProject, setExpProject] = useState<string>('');
@@ -185,6 +186,55 @@ export const Dashboard: React.FC = () => {
               <HistogramSvg unit="cm³" series={[{ label: 'Volume', color: PALETTE[2 % PALETTE.length], values: dist.volumes }]} />
             </div>
           )}
+        </div>
+      )}
+
+      {prePost.length > 0 && (
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(340px,1fr))', marginBottom: 16 }}>
+          <div className="card pad">
+            <div className="card-title"><ArrowRightLeft /> Pre → Post volume (MDRS mission)</div>
+            <p className="muted" style={{ fontSize: '.78rem', marginTop: -6, marginBottom: 10 }}>Per-tube volume before vs. after the mission rotation.</p>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="mono" style={{ width: '100%', fontSize: '.8rem', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left' }}><th>Tube</th><th>Pre cm³</th><th>Post cm³</th><th>Δ cm³</th><th>Δ%</th></tr>
+                </thead>
+                <tbody>
+                  {prePost.map(r => {
+                    const both = r.pre != null && r.post != null;
+                    const delta = both ? r.post! - r.pre! : null;
+                    const pct = both && r.pre !== 0 ? (delta! / r.pre!) * 100 : null;
+                    return (
+                      <tr key={r.tube} style={{ borderTop: '1px solid var(--line)' }}>
+                        <td>Tube {r.tube}</td>
+                        <td>{r.pre != null ? r.pre.toFixed(1) : '—'}</td>
+                        {r.post != null ? (
+                          <>
+                            <td>{r.post.toFixed(1)}</td>
+                            <td>{delta! >= 0 ? '+' : ''}{delta!.toFixed(1)}</td>
+                            <td>{pct != null ? `${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%` : '—'}</td>
+                          </>
+                        ) : (
+                          <td colSpan={3} className="muted">{r.note || '—'}</td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="card pad">
+            <div className="card-title"><TrendingUp /> Pre vs Post volume distribution</div>
+            <p className="muted" style={{ fontSize: '.78rem', marginTop: -6, marginBottom: 10 }}>Every tube's volume, pooled by mission stage.</p>
+            <HistogramSvg
+              unit="cm³"
+              series={[
+                { label: 'Pre', color: PALETTE[4 % PALETTE.length], values: prePost.map(r => r.pre).filter((v): v is number => v != null) },
+                { label: 'Post', color: PALETTE[0], values: prePost.map(r => r.post).filter((v): v is number => v != null) },
+              ]}
+            />
+          </div>
         </div>
       )}
 
@@ -631,6 +681,38 @@ function distributionAggregates(entries: Ec5Entry[], toolResults: AnalysisResult
     .map(r => parseFloat(String(r.metrics['Volume'])))
     .filter(v => !Number.isNaN(v));
   return { thermalMin, thermalMax, volumes };
+}
+
+// Pulls "Pre · Tube 3" / "Post · Tube 3" (the mdrs-pre-post-mission dataset's
+// `treatment` convention — a two-timepoint mission, not a harvest sequence,
+// so it's a separate parser from harvestTubeOf rather than forcing a fake
+// harvest number) out of an entry's fields.
+function stageOf(e: Ec5Entry): { stage: 'pre' | 'post'; tube: number } | null {
+  const f = e.fields.find(f => f.name.toLowerCase() === 'treatment');
+  if (!f) return null;
+  const m = f.value.match(/^(pre|post)\s*[·:]\s*tube\s*(\d+)/i);
+  return m ? { stage: m[1].toLowerCase() as 'pre' | 'post', tube: parseInt(m[2], 10) } : null;
+}
+
+// Per-tube Pre/Post volume pairing for a before/after mission comparison.
+// Tubes missing one side (e.g. no post-scan) carry that side's dataset note
+// (e.g. "tube exploded in transit") rather than a silently blank cell.
+interface PrePostRow { tube: number; pre: number | null; post: number | null; note: string | null; }
+function prePostAggregates(entries: Ec5Entry[], toolResults: AnalysisResult[]): PrePostRow[] {
+  const volumeByRef = new Map(toolResults.filter(r => r.tool === 'scan3d-viewer').map(r => [r.ref, r]));
+  const byTube = new Map<number, { pre: number | null; post: number | null; note: string | null }>();
+  for (const e of entries) {
+    const st = stageOf(e);
+    if (!st || !e.scanUrl) continue;
+    const row = byTube.get(st.tube) || { pre: null, post: null, note: null };
+    const raw = volumeByRef.get(`${e.project}::${e.uuid}`)?.metrics['Volume'];
+    const v = raw != null ? parseFloat(String(raw)) : NaN;
+    if (!Number.isNaN(v)) row[st.stage] = v;
+    const noteField = e.fields.find(f => f.name.toLowerCase() === 'notes');
+    if (noteField?.value) row.note = noteField.value;
+    byTube.set(st.tube, row);
+  }
+  return [...byTube.entries()].sort((a, b) => a[0] - b[0]).map(([tube, r]) => ({ tube, ...r }));
 }
 
 // Aggregate tool results across the loaded (and project-toggle-enabled) images:
