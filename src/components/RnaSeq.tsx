@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dna, Workflow, Filter, ScatterChart, Flame, Grid3x3, Table as TableIcon, ExternalLink } from 'lucide-react';
 import {
   TISSUES, DE_COMPARISONS, fetchReadBudget, fetchPca, fetchDE, fetchModuleTraits, fetchAllMarkers,
-  buildGeneNameIndex, type Track, type Tissue, type ReadBudgetRow, type PcaRow, type DERow,
-  type ModuleTraitCell, type MarkerRow,
+  buildGeneIndex, type Track, type Tissue, type ReadBudgetRow, type PcaRow, type DERow,
+  type ModuleTraitCell, type MarkerRow, type GeneInfo,
 } from '../lib/rnaseq';
 import { benjaminiHochberg } from '../lib/stats';
 import { readVars, mix, PALETTE } from '../lib/svgTheme';
@@ -13,8 +13,7 @@ const tissueColor = (t: string) => PALETTE[Math.max(0, TISSUES.indexOf(t as Tiss
 
 export const RnaSeq: React.FC = () => {
   const { data: markers, error: markersError, loading: markersLoading } = useAsync(fetchAllMarkers, []);
-  const geneIndex = useMemo(() => buildGeneNameIndex(markers || []), [markers]);
-  const nameOf = (gene: string) => geneIndex.get(gene)?.name || gene;
+  const geneIndex = useMemo(() => buildGeneIndex(markers || []), [markers]);
 
   return (
     <div>
@@ -36,7 +35,7 @@ export const RnaSeq: React.FC = () => {
 
       <ReadBudgetSection />
       <PcaSection />
-      <VolcanoSection nameOf={nameOf} />
+      <VolcanoSection geneIndex={geneIndex} />
       <WgcnaSection />
       <MarkerSection markers={markers} error={markersError} loading={markersLoading} />
     </div>
@@ -236,41 +235,118 @@ const PcaSection: React.FC = () => {
   );
 };
 
-// ---- 4. volcano plots ----
-const VolcanoSvg: React.FC<{ rows: DERow[]; nameOf: (gene: string) => string }> = ({ rows, nameOf }) => {
-  const c = readVars({ '--line': '#e5e9f0', '--muted': '#5a6473', '--warn': '#c0392b' });
+// ---- 4. volcano plots (lasso multi-select + rich hover popup) ----
+interface HoverInfo { row: DERow; info: GeneInfo | null; clientX: number; clientY: number; }
+
+// Standard ray-casting point-in-polygon test.
+function pointInPolygon(x: number, y: number, poly: { x: number; y: number }[]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
+    const intersect = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+const VolcanoSvg: React.FC<{
+  rows: DERow[];
+  geneIndex: Map<string, GeneInfo>;
+  selectedGenes: Set<string> | null;
+  onSelect: (rows: DERow[]) => void;
+  onHover: (info: HoverInfo | null) => void;
+}> = ({ rows, geneIndex, selectedGenes, onSelect, onHover }) => {
+  const c = readVars({ '--line': '#e5e9f0', '--muted': '#5a6473', '--warn': '#c0392b', '--accent': '#3b6ea5' });
+  const svgRef = useRef<SVGSVGElement>(null);
+  const draggingRef = useRef(false);
+  const lassoRef = useRef<{ x: number; y: number }[]>([]);
+  const [lassoDraw, setLassoDraw] = useState<{ x: number; y: number }[] | null>(null);
+
   const W = 640, H = 340, pad = 44;
-  const xs = rows.map(r => r.log2FoldChange);
-  const ys = rows.map(r => -Math.log10(Math.max(r.padj, 1e-300)));
-  const xAbs = Math.max(1, ...xs.map(Math.abs));
-  const yMax = Math.max(1, ...ys.filter(v => Number.isFinite(v)));
+  const xAbs = Math.max(1, ...rows.map(r => Math.abs(r.log2FoldChange)));
+  const yMax = Math.max(1, ...rows.map(r => -Math.log10(Math.max(r.padj, 1e-300))).filter(Number.isFinite));
   const sx = (v: number) => pad + ((v + xAbs) / (2 * xAbs)) * (W - pad * 2);
   const sy = (v: number) => H - pad - (Math.min(v, yMax) / yMax) * (H - pad * 2);
   const isSig = (r: DERow) => r.padj < 0.05 && Math.abs(r.log2FoldChange) > 1;
-  const sig = rows.filter(isSig), rest = rows.filter(r => !isSig(r));
+
+  // Precompute each point's screen position once for both rendering and lasso hit-testing.
+  const points = useMemo(() => rows.map(r => ({
+    row: r, x: sx(r.log2FoldChange), y: sy(-Math.log10(Math.max(r.padj, 1e-300))), sig: isSig(r),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  })), [rows, xAbs, yMax]);
+
+  const svgPoint = (e: React.MouseEvent): { x: number; y: number } | null => {
+    const svg = svgRef.current, ctm = svg?.getScreenCTM();
+    if (!svg || !ctm) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(ctm.inverse());
+    return { x: p.x, y: p.y };
+  };
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const p = svgPoint(e);
+    if (!p) return;
+    draggingRef.current = true;
+    lassoRef.current = [p];
+    setLassoDraw([p]);
+    onHover(null);
+  };
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!draggingRef.current) return;
+    const p = svgPoint(e);
+    if (!p) return;
+    lassoRef.current = [...lassoRef.current, p];
+    setLassoDraw(lassoRef.current);
+  };
+  const finishDrag = () => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    const path = lassoRef.current;
+    if (path.length > 2) onSelect(points.filter(pt => pointInPolygon(pt.x, pt.y, path)).map(pt => pt.row));
+    lassoRef.current = [];
+    setLassoDraw(null);
+  };
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 420, display: 'block' }}>
+    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 420, display: 'block', cursor: 'crosshair' }}
+      onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={finishDrag} onMouseLeave={finishDrag}>
       <line x1={pad} y1={H - pad} x2={W - pad} y2={H - pad} stroke={c['--line']} strokeWidth={0.75} />
       <line x1={sx(0)} y1={pad} x2={sx(0)} y2={H - pad} stroke={c['--line']} strokeWidth={0.75} strokeDasharray="3 3" />
       <text x={W / 2} y={H - 6} fontSize={9} textAnchor="middle" fill={c['--muted']}>log2 fold change</text>
       <text x={12} y={H / 2} fontSize={9} textAnchor="middle" fill={c['--muted']} transform={`rotate(-90 12 ${H / 2})`}>-log10(padj)</text>
-      {rest.map((r, i) => <circle key={`r${i}`} cx={sx(r.log2FoldChange)} cy={sy(-Math.log10(Math.max(r.padj, 1e-300)))} r={1.6} fill={c['--muted']} fillOpacity={0.4} />)}
-      {sig.map((r, i) => (
-        <circle key={`s${i}`} cx={sx(r.log2FoldChange)} cy={sy(-Math.log10(Math.max(r.padj, 1e-300)))} r={2.4} fill={c['--warn']} fillOpacity={0.85}>
-          <title>{`${nameOf(r.gene)} · log2FC ${r.log2FoldChange.toFixed(2)}, padj ${r.padj.toExponential(2)}`}</title>
-        </circle>
+      {points.map((pt, i) => {
+        const selected = selectedGenes?.has(pt.row.gene);
+        return (
+          <circle key={i} cx={pt.x} cy={pt.y} r={pt.sig || selected ? 2.6 : 1.6}
+            fill={selected ? c['--accent'] : pt.sig ? c['--warn'] : c['--muted']}
+            fillOpacity={pt.sig || selected ? 0.9 : 0.4}
+            onMouseEnter={e => onHover({ row: pt.row, info: geneIndex.get(pt.row.gene) || null, clientX: e.clientX, clientY: e.clientY })}
+            onMouseLeave={() => onHover(null)} />
+        );
+      })}
+      {selectedGenes && points.filter(pt => selectedGenes.has(pt.row.gene)).map((pt, i) => (
+        <circle key={`ring${i}`} cx={pt.x} cy={pt.y} r={5} fill="none" stroke={c['--accent']} strokeWidth={1.2} pointerEvents="none" />
       ))}
-      <text x={W - pad} y={pad + 10} fontSize={9} textAnchor="end" fill={c['--muted']}>{sig.length} significant of {rows.length} tested</text>
+      {lassoDraw && lassoDraw.length > 1 && (
+        <polygon points={lassoDraw.map(p => `${p.x},${p.y}`).join(' ')} fill={c['--accent']} fillOpacity={0.12} stroke={c['--accent']} strokeWidth={1} strokeDasharray="4 2" />
+      )}
+      <text x={W - pad} y={pad + 10} fontSize={9} textAnchor="end" fill={c['--muted']}>{points.filter(p => p.sig).length} significant of {rows.length} tested</text>
     </svg>
   );
 };
 
-const VolcanoSection: React.FC<{ nameOf: (gene: string) => string }> = ({ nameOf }) => {
+const VolcanoSection: React.FC<{ geneIndex: Map<string, GeneInfo> }> = ({ geneIndex }) => {
   const [track, setTrack] = useState<Track>('rRNArm');
   const [pairIdx, setPairIdx] = useState(0);
   const [a, b] = DE_COMPARISONS[pairIdx];
   const { data, error, loading } = useAsync(() => fetchDE(a, b, track), [a, b, track]);
+  const [selected, setSelected] = useState<DERow[] | null>(null);
+  const [hover, setHover] = useState<HoverInfo | null>(null);
+  const nameOf = (gene: string) => geneIndex.get(gene)?.name || gene;
+
+  // A comparison/track switch changes the whole gene universe — a stale selection wouldn't mean anything.
+  useEffect(() => { setSelected(null); }, [a, b, track]);
+  const selectedGeneSet = useMemo(() => (selected && selected.length ? new Set(selected.map(r => r.gene)) : null), [selected]);
 
   return (
     <div className="card pad" style={{ marginBottom: 16 }}>
@@ -286,10 +362,48 @@ const VolcanoSection: React.FC<{ nameOf: (gene: string) => string }> = ({ nameOf
           </select>
         </div>
       </div>
-      <p className="muted" style={{ fontSize: '.78rem', marginTop: 4, marginBottom: 10 }}>Highlighted points: padj &lt; 0.05 and |log2FC| &gt; 1. Hover a highlighted point for its gene.</p>
+      <p className="muted" style={{ fontSize: '.78rem', marginTop: 4, marginBottom: 10 }}>Highlighted points: padj &lt; 0.05 and |log2FC| &gt; 1. Drag to lasso-select genes; hover any point for details.</p>
       {loading && <p className="muted" style={{ fontSize: '.85rem' }}>Loading…</p>}
       {error && <ErrorBanner message={error} />}
-      {data && data.length > 0 && <VolcanoSvg rows={data} nameOf={nameOf} />}
+      {data && data.length > 0 && (
+        <VolcanoSvg rows={data} geneIndex={geneIndex} selectedGenes={selectedGeneSet} onSelect={setSelected} onHover={setHover} />
+      )}
+      {hover && (
+        <div style={{
+          position: 'fixed', left: hover.clientX + 14, top: hover.clientY + 14, zIndex: 50, maxWidth: 260,
+          background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 10px',
+          fontSize: '.76rem', boxShadow: '0 4px 16px rgba(0,0,0,.18)', pointerEvents: 'none',
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: 3 }}>{hover.info?.name || hover.row.gene}</div>
+          {hover.info?.name && <div className="mono muted" style={{ fontSize: '.7rem' }}>{hover.row.gene}</div>}
+          <div>log2FC {hover.row.log2FoldChange.toFixed(2)} · padj {hover.row.padj.toExponential(2)}</div>
+          <div className="muted">baseMean {hover.row.baseMean.toFixed(1)}</div>
+          {hover.info?.ec && <div className="muted">EC {hover.info.ec}</div>}
+          <div className="muted">{hover.info ? `τ=${hover.info.tau.toFixed(3)}, marker for ${hover.info.tissue}` : 'No Swiss-Prot / tau match'}</div>
+        </div>
+      )}
+      {selected && selected.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <strong style={{ fontSize: '.85rem' }}>{selected.length} genes selected</strong>
+            <button className="btn btn-sm" onClick={() => setSelected(null)}>Clear selection</button>
+          </div>
+          <div style={{ overflowX: 'auto', maxHeight: 260, overflowY: 'auto' }}>
+            <table className="mono" style={{ width: '100%', fontSize: '.76rem', borderCollapse: 'collapse' }}>
+              <thead><tr style={{ textAlign: 'left' }}><th>Gene</th><th>Name</th><th>log2FC</th><th>padj</th><th>baseMean</th></tr></thead>
+              <tbody>
+                {[...selected].sort((x, y) => Math.abs(y.log2FoldChange) - Math.abs(x.log2FoldChange)).map(r => (
+                  <tr key={r.gene} style={{ borderTop: '1px solid var(--line)' }}>
+                    <td>{r.gene}</td>
+                    <td className={nameOf(r.gene) !== r.gene ? '' : 'muted'}>{nameOf(r.gene) !== r.gene ? nameOf(r.gene) : '—'}</td>
+                    <td>{r.log2FoldChange.toFixed(2)}</td><td>{r.padj.toExponential(2)}</td><td>{r.baseMean.toFixed(1)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

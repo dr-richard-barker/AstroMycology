@@ -187,7 +187,10 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {prePost.length > 0 && (
+      {prePost.rows.length > 0 && (() => {
+        const preLabel = `Pre cm³${prePost.preAge != null ? ` (${prePost.preAge} DPI)` : ''}`;
+        const postLabel = `Post cm³${prePost.postAge != null ? ` (${prePost.postAge} DPI)` : ''}`;
+        return (
         <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(340px,1fr))', marginBottom: 16 }}>
           <div className="card pad">
             <div className="card-title"><ArrowRightLeft /> Pre → Post volume (MDRS mission)</div>
@@ -195,10 +198,10 @@ export const Dashboard: React.FC = () => {
             <div style={{ overflowX: 'auto' }}>
               <table className="mono" style={{ width: '100%', fontSize: '.8rem', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ textAlign: 'left' }}><th>Tube</th><th>Pre cm³</th><th>Post cm³</th><th>Δ cm³</th><th>Δ%</th></tr>
+                  <tr style={{ textAlign: 'left' }}><th>Tube</th><th>{preLabel}</th><th>{postLabel}</th><th>Δ cm³</th><th>Δ%</th></tr>
                 </thead>
                 <tbody>
-                  {prePost.map(r => {
+                  {prePost.rows.map(r => {
                     const both = r.pre != null && r.post != null;
                     const delta = both ? r.post! - r.pre! : null;
                     const pct = both && r.pre !== 0 ? (delta! / r.pre!) * 100 : null;
@@ -228,7 +231,7 @@ export const Dashboard: React.FC = () => {
             <ScatterSvg
               unit="cm³"
               color={PALETTE[0]}
-              points={prePost.filter(r => r.pre != null && r.post != null).map(r => ({ x: r.pre!, y: r.post!, label: `T${r.tube}` }))}
+              points={prePost.rows.filter(r => r.pre != null && r.post != null).map(r => ({ x: r.pre!, y: r.post!, label: `T${r.tube}` }))}
             />
           </div>
           <div className="card pad">
@@ -237,13 +240,14 @@ export const Dashboard: React.FC = () => {
             <HistogramSvg
               unit="cm³"
               series={[
-                { label: 'Pre', color: PALETTE[4 % PALETTE.length], values: prePost.map(r => r.pre).filter((v): v is number => v != null) },
-                { label: 'Post', color: PALETTE[0], values: prePost.map(r => r.post).filter((v): v is number => v != null) },
+                { label: 'Pre', color: PALETTE[4 % PALETTE.length], values: prePost.rows.map(r => r.pre).filter((v): v is number => v != null) },
+                { label: 'Post', color: PALETTE[0], values: prePost.rows.map(r => r.post).filter((v): v is number => v != null) },
               ]}
             />
           </div>
         </div>
-      )}
+        );
+      })()}
 
       <div className="card pad" style={{ marginBottom: 16 }}>
         <div className="card-title"><CalendarRange /> Entries over time</div>
@@ -719,13 +723,25 @@ function stageOf(e: Ec5Entry): { stage: 'pre' | 'post'; tube: number } | null {
   return m ? { stage: m[1].toLowerCase() as 'pre' | 'post', tube: parseInt(m[2], 10) } : null;
 }
 
+// Mycelium age in days-post-inoculation, when a dataset records one (e.g.
+// mdrs-pre-post-mission's age_days column) — lets a two-timepoint mission
+// dataset's Pre/Post labels carry a real, cross-dataset-comparable age
+// instead of only a mission-relative label.
+function ageDaysOf(e: Ec5Entry): number | null {
+  const f = e.fields.find(f => f.name.toLowerCase() === 'age_days' || f.name.toLowerCase() === 'age days');
+  if (!f) return null;
+  const n = parseInt(f.value, 10);
+  return Number.isNaN(n) ? null : n;
+}
+
 // Per-tube Pre/Post volume pairing for a before/after mission comparison.
 // Tubes missing one side (e.g. no post-scan) carry that side's dataset note
 // (e.g. "tube exploded in transit") rather than a silently blank cell.
 interface PrePostRow { tube: number; pre: number | null; post: number | null; note: string | null; }
-function prePostAggregates(entries: Ec5Entry[], toolResults: AnalysisResult[]): PrePostRow[] {
+function prePostAggregates(entries: Ec5Entry[], toolResults: AnalysisResult[]): { rows: PrePostRow[]; preAge: number | null; postAge: number | null } {
   const volumeByRef = new Map(toolResults.filter(r => r.tool === 'scan3d-viewer').map(r => [r.ref, r]));
   const byTube = new Map<number, { pre: number | null; post: number | null; note: string | null }>();
+  let preAge: number | null = null, postAge: number | null = null;
   for (const e of entries) {
     const st = stageOf(e);
     if (!st || !e.scanUrl) continue;
@@ -736,8 +752,11 @@ function prePostAggregates(entries: Ec5Entry[], toolResults: AnalysisResult[]): 
     const noteField = e.fields.find(f => f.name.toLowerCase() === 'notes');
     if (noteField?.value) row.note = noteField.value;
     byTube.set(st.tube, row);
+    const age = ageDaysOf(e);
+    if (age != null) { if (st.stage === 'pre') preAge = age; else postAge = age; }
   }
-  return [...byTube.entries()].sort((a, b) => a[0] - b[0]).map(([tube, r]) => ({ tube, ...r }));
+  const rows = [...byTube.entries()].sort((a, b) => a[0] - b[0]).map(([tube, r]) => ({ tube, ...r }));
+  return { rows, preAge, postAge };
 }
 
 // Aggregate tool results across the loaded (and project-toggle-enabled) images:

@@ -106,13 +106,15 @@ export async function fetchAllMarkers(): Promise<MarkerRow[]> {
   return perTissue.flat();
 }
 
-// Gene name/EC lookup built from every marker file — the only source of
-// human-readable names available without the (deliberately descoped) NCBI
-// GTF + GO-ontology bridge. Coverage is sparse (only genes that are a top-tau
-// marker for some tissue), so most whole-genome DE hits fall back to the
-// bare locus tag — that's a real limit of the data, not a bug.
-export function buildGeneNameIndex(markers: MarkerRow[]): Map<string, { name: string; ec: string }> {
-  const idx = new Map<string, { name: string; ec: string }>();
-  for (const m of markers) if (m.proteinName && !idx.has(m.gene)) idx.set(m.gene, { name: m.proteinName, ec: m.ec });
+// Gene name/EC/tissue-specificity lookup built from every marker file — the
+// only source of human-readable annotation available without the
+// (deliberately descoped) NCBI GTF + GO-ontology bridge. Coverage is sparse
+// (only genes that are a top-tau marker for some tissue), so most
+// whole-genome DE/volcano hits fall back to the bare locus tag with no tau —
+// that's a real limit of the data, not a bug.
+export interface GeneInfo { name: string; ec: string; tissue: Tissue; tau: number; }
+export function buildGeneIndex(markers: MarkerRow[]): Map<string, GeneInfo> {
+  const idx = new Map<string, GeneInfo>();
+  for (const m of markers) if (!idx.has(m.gene)) idx.set(m.gene, { name: m.proteinName, ec: m.ec, tissue: m.tissue, tau: m.tau });
   return idx;
 }

@@ -1,15 +1,15 @@
-filename,species,media_kind,genotype,treatment,captured,latitude,longitude,camera,width_px,height_px,notes,source_path
-Tube01_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 1,2025-02-03,,,,,,,Pre MDRS/Tube01_Raw_Mesh.ply
-Tube02_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 2,2025-02-03,,,,,,,Pre MDRS/Tube02_Raw_Mesh.ply
-Tube03_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 3,2025-02-03,,,,,,No post-mission scan — tube exploded in transit through the airport on the way home from MDRS.,Pre MDRS/Tube03_Raw_Mesh.ply
-Tube04_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 4,2025-02-03,,,,,,,Pre MDRS/Tube04_Raw_Mesh.ply
-Tube05_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 5,2025-02-03,,,,,,No post-mission scan — left at MDRS; too contaminated to transport by air.,Pre MDRS/Tube05_Raw_Mesh.ply
-Tube06_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 6,2025-02-03,,,,,,,Pre MDRS/Tube06_Raw_Mesh.ply
-Tube07_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 7,2025-02-03,,,,,,,Pre MDRS/Tube07_Raw_Mesh.ply
-Tube08_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 8,2025-02-03,,,,,,,Pre MDRS/Tube08_Raw_Mesh.ply
-Tube01_Post_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Post · Tube 1,2025-04-28,,,,,,,Post MDRS/Tube01_Post_Raw_Mesh.ply
-Tube02_Post_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Post · Tube 2,2025-04-28,,,,,,,Post MDRS/Tube02_Post_Raw_Mesh.ply
-Tube04_Post_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Post · Tube 4,2025-04-28,,,,,,,Post MDRS/Tube04_Post_Raw_Mesh.ply
-Tube06_Post_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Post · Tube 6,2025-04-28,,,,,,,Post MDRS/Tube06_Post_Raw_Mesh.ply
-Tube07_Post_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Post · Tube 7,2025-04-28,,,,,,,Post MDRS/Tube07_Post_Raw_Mesh.ply
-Tube08_Post_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Post · Tube 8,2025-04-28,,,,,,,Post MDRS/Tube08_Post_Raw_Mesh.ply
+filename,species,media_kind,genotype,treatment,age_days,captured,latitude,longitude,camera,width_px,height_px,notes,source_path
+Tube01_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 1,11,2025-02-03,38.4065,-110.7919,,,,,Pre MDRS/Tube01_Raw_Mesh.ply
+Tube02_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 2,11,2025-02-03,38.4065,-110.7919,,,,,Pre MDRS/Tube02_Raw_Mesh.ply
+Tube03_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 3,11,2025-02-03,38.4065,-110.7919,,,,No post-mission scan — tube exploded in transit through the airport on the way home from MDRS.,Pre MDRS/Tube03_Raw_Mesh.ply
+Tube04_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 4,11,2025-02-03,38.4065,-110.7919,,,,,Pre MDRS/Tube04_Raw_Mesh.ply
+Tube05_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 5,11,2025-02-03,38.4065,-110.7919,,,,No post-mission scan — left at Purdue; too contaminated to bring on the mission.,Pre MDRS/Tube05_Raw_Mesh.ply
+Tube06_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 6,11,2025-02-03,38.4065,-110.7919,,,,,Pre MDRS/Tube06_Raw_Mesh.ply
+Tube07_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 7,11,2025-02-03,38.4065,-110.7919,,,,,Pre MDRS/Tube07_Raw_Mesh.ply
+Tube08_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Pre · Tube 8,11,2025-02-03,38.4065,-110.7919,,,,,Pre MDRS/Tube08_Raw_Mesh.ply
+Tube01_Post_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Post · Tube 1,29,2025-04-28,38.4065,-110.7919,,,,,Post MDRS/Tube01_Post_Raw_Mesh.ply
+Tube02_Post_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Post · Tube 2,29,2025-04-28,38.4065,-110.7919,,,,,Post MDRS/Tube02_Post_Raw_Mesh.ply
+Tube04_Post_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Post · Tube 4,29,2025-04-28,38.4065,-110.7919,,,,,Post MDRS/Tube04_Post_Raw_Mesh.ply
+Tube06_Post_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Post · Tube 6,29,2025-04-28,38.4065,-110.7919,,,,,Post MDRS/Tube06_Post_Raw_Mesh.ply
+Tube07_Post_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Post · Tube 7,29,2025-04-28,38.4065,-110.7919,,,,,Post MDRS/Tube07_Post_Raw_Mesh.ply
+Tube08_Post_Raw_Mesh.ply,Pleurotus ostreatus,scan3d,Blue Oyster,Post · Tube 8,29,2025-04-28,38.4065,-110.7919,,,,,Post MDRS/Tube08_Post_Raw_Mesh.ply

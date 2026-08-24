@@ -63,7 +63,7 @@ const BUILTIN: ProjectRef[] = [
     slug: 'gh:dr-richard-barker/AstroMycology/main/datasets/mdrs-pre-post-mission',
     name: 'MDRS Pre/Post mission (8 tubes)', type: 'github',
     gh: { owner: 'dr-richard-barker', repo: 'AstroMycology', ref: 'main', path: 'datasets/mdrs-pre-post-mission' },
-    reference: { text: 'Blue Oyster (Pleurotus ostreatus) grow-tube 3D scans taken before and after an analog-astronaut mission rotation at the Mars Desert Research Station (MDRS). Tube 3 exploded in transit on the way home; tube 5 was too contaminated to fly back and was left at MDRS — neither has a post-mission scan.', url: 'https://github.com/dr-richard-barker/AstroMycology/tree/main/datasets/mdrs-pre-post-mission' },
+    reference: { text: 'Blue Oyster (Pleurotus ostreatus) grow-tube 3D scans taken before and after an analog-astronaut mission rotation at the Mars Desert Research Station (MDRS). Tube 3 exploded in transit on the way home; tube 5 was too contaminated to bring on the mission and was left at Purdue — neither has a post-mission scan.', url: 'https://github.com/dr-richard-barker/AstroMycology/tree/main/datasets/mdrs-pre-post-mission' },
     provenance: { organism: 'Pleurotus ostreatus (Blue Oyster)', conditions: '8 tubes scanned pre-mission (2025-02-03), 6 rescanned post-mission (2025-04-28); Revopoint structured-light mesh scans', description: '14 3D scans (binary PLY) — a before/after volume comparison across an MDRS mission rotation.', source: 'datasets/mdrs-pre-post-mission in this repo' },
   },
 ];
