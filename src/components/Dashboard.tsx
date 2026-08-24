@@ -225,6 +225,15 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="card pad">
+            <div className="card-title"><Sprout /> Pre vs Post volume, per tube</div>
+            <p className="muted" style={{ fontSize: '.78rem', marginTop: -6, marginBottom: 10 }}>Each point is one tube; above the dashed line means it grew.</p>
+            <ScatterSvg
+              unit="cm³"
+              color={PALETTE[0]}
+              points={prePost.filter(r => r.pre != null && r.post != null).map(r => ({ x: r.pre!, y: r.post!, label: `T${r.tube}` }))}
+            />
+          </div>
+          <div className="card pad">
             <div className="card-title"><TrendingUp /> Pre vs Post volume distribution</div>
             <p className="muted" style={{ fontSize: '.78rem', marginTop: -6, marginBottom: 10 }}>Every tube's volume, pooled by mission stage.</p>
             <HistogramSvg
@@ -465,6 +474,48 @@ const StatsRow: React.FC<{ values: number[]; unit?: string; digits?: number }> =
       <span>range {f(s.min)}–{f(s.max)}{unit}</span>
       <span>σ {f(s.std)}{unit}</span>
     </div>
+  );
+};
+
+// ---- scatter plot with a y=x reference line (for a paired before/after metric) ----
+interface ScatterPoint { x: number; y: number; label: string; }
+const ScatterSvg: React.FC<{ points: ScatterPoint[]; unit?: string; color?: string }> = ({ points, unit = '', color }) => {
+  const c = readVars({ '--line': '#e5e9f0', '--muted': '#5a6473', '--accent': '#3b6ea5', '--card': '#ffffff' });
+  if (!points.length) return <p className="muted" style={{ fontSize: '.85rem' }}>No paired data yet.</p>;
+
+  const dotColor = color || c['--accent'];
+  const all = points.flatMap(p => [p.x, p.y]);
+  const lo = Math.min(0, ...all), hi = Math.max(...all) * 1.08;
+  const W = 320, H = 320, pad = 34;
+  const s = (v: number) => pad + ((v - lo) / Math.max(1e-9, hi - lo)) * (W - pad * 2);
+  // SVG y grows downward, so the value axis is flipped relative to s().
+  const sy = (v: number) => H - pad - ((v - lo) / Math.max(1e-9, hi - lo)) * (H - pad * 2);
+  const ticks = 4;
+  const tickVals = Array.from({ length: ticks + 1 }, (_, i) => lo + (i / ticks) * (hi - lo));
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxWidth: 340, display: 'block', margin: '0 auto' }}>
+      {tickVals.map((v, i) => (
+        <g key={i}>
+          <line x1={s(v)} y1={pad} x2={s(v)} y2={H - pad} stroke={c['--line']} strokeWidth={0.5} />
+          <line x1={pad} y1={sy(v)} x2={W - pad} y2={sy(v)} stroke={c['--line']} strokeWidth={0.5} />
+          <text x={s(v)} y={H - pad + 12} fontSize={8} textAnchor="middle" fill={c['--muted']}>{v.toFixed(0)}</text>
+          <text x={pad - 5} y={sy(v) + 3} fontSize={8} textAnchor="end" fill={c['--muted']}>{v.toFixed(0)}</text>
+        </g>
+      ))}
+      {/* y=x reference: points above this line grew, below shrank */}
+      <line x1={s(lo)} y1={sy(lo)} x2={s(hi)} y2={sy(hi)} stroke={c['--muted']} strokeWidth={1} strokeDasharray="3 3" />
+      {points.map((p, i) => (
+        <circle key={i} cx={s(p.x)} cy={sy(p.y)} r={5} fill={dotColor} stroke={c['--card']} strokeWidth={1}>
+          <title>{`${p.label}: pre ${p.x.toFixed(1)}${unit}, post ${p.y.toFixed(1)}${unit}`}</title>
+        </circle>
+      ))}
+      {points.map((p, i) => (
+        <text key={`l${i}`} x={s(p.x)} y={sy(p.y) - 8} fontSize={8} textAnchor="middle" fill={c['--muted']}>{p.label}</text>
+      ))}
+      <text x={W / 2} y={H - 4} fontSize={9} textAnchor="middle" fill={c['--muted']}>Pre {unit}</text>
+      <text x={10} y={H / 2} fontSize={9} textAnchor="middle" fill={c['--muted']} transform={`rotate(-90 10 ${H / 2})`}>Post {unit}</text>
+    </svg>
   );
 };
 
