@@ -282,10 +282,10 @@ function parseDelimitedMeta(text: string, delim: string): MetaMap {
   });
   return indexByFilename(objs);
 }
-function splitRows(text: string): string[] {
+export function splitRows(text: string): string[] {
   return text.replace(/\r\n?/g, '\n').split('\n');
 }
-function splitLine(line: string, delim: string): string[] {
+export function splitLine(line: string, delim: string): string[] {
   const out: string[] = []; let cur = ''; let q = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
