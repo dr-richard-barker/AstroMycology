@@ -6,6 +6,12 @@ import { allResults, type AnalysisResult } from '../lib/cose-results';
 import { loadWorld, countryOf, featurePath, type GeoFeature } from '../lib/geo';
 import { readVars, parseColor, toHex, mix, PALETTE } from '../lib/svgTheme';
 
+// A short "how to read this" note placed under a chart/table — distinct from
+// the existing above-chart line that answers "what is this."
+const Caption: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <p className="muted" style={{ fontSize: '.72rem', marginTop: 8, marginBottom: 0 }}>{children}</p>
+);
+
 export const Dashboard: React.FC = () => {
   const [entries, setEntries] = useState<Ec5Entry[] | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
@@ -108,11 +114,16 @@ export const Dashboard: React.FC = () => {
         <div className="card pad">
           <div className="card-title"><FolderTree /> Entries per project</div>
           <HBar data={agg.byProject} colorFor={(_, i) => PALETTE[i % PALETTE.length]} />
+          <Caption>Longer bars = more entries loaded from that source; toggle projects above to focus on one.</Caption>
         </div>
         <div className="card pad">
           <div className="card-title"><Sprout /> Top species</div>
-          {agg.topSpecies.length ? <HBar data={agg.topSpecies} colorFor={() => 'var(--accent2)'} />
-            : <p className="muted" style={{ fontSize: '.85rem' }}>No species field detected in these entries.</p>}
+          {agg.topSpecies.length ? (
+            <>
+              <HBar data={agg.topSpecies} colorFor={() => 'var(--accent2)'} />
+              <Caption>Counts every entry with a recognized species field, across all loaded projects.</Caption>
+            </>
+          ) : <p className="muted" style={{ fontSize: '.85rem' }}>No species field detected in these entries.</p>}
         </div>
       </div>
 
@@ -138,6 +149,7 @@ export const Dashboard: React.FC = () => {
               </div>
             ))}
           </div>
+          <Caption>Each metric is averaged only across the images that specific tool has actually analyzed (n) — not every loaded image.</Caption>
         </div>
       )}
 
@@ -148,6 +160,7 @@ export const Dashboard: React.FC = () => {
               <div className="card-title"><TrendingUp /> Volume by harvest</div>
               <p className="muted" style={{ fontSize: '.78rem', marginTop: -6, marginBottom: 10 }}>Computed by the 3D-scan analysis (Database → "Compute volumes"), grouped by tube.</p>
               <LineChartSvg series={growth.volumeSeries} xMin={growth.harvestRange[0]} xMax={growth.harvestRange[1]} yUnit="cm³" />
+              <Caption>One line per tube; a gap means that harvest/tube combination has no scan, not zero volume.</Caption>
             </div>
           )}
           {(growth.minSeries.length > 0 || growth.maxSeries.length > 0) && (
@@ -155,6 +168,7 @@ export const Dashboard: React.FC = () => {
               <div className="card-title"><Thermometer /> Temperature range by harvest</div>
               <p className="muted" style={{ fontSize: '.78rem', marginTop: -6, marginBottom: 10 }}>OCR-read off each thermal photo's colorbar (Database → "Read thermal data"); dashed = frame min, solid = frame max, one colour per tube.</p>
               <LineChartSvg series={[...growth.maxSeries, ...growth.minSeries.map(s => ({ ...s, dashed: true }))]} xMin={growth.harvestRange[0]} xMax={growth.harvestRange[1]} yUnit="°C" />
+              <Caption>The gap between a tube's dashed and solid line is that frame's temperature spread, not measurement error.</Caption>
             </div>
           )}
         </div>
@@ -174,6 +188,7 @@ export const Dashboard: React.FC = () => {
                   { label: 'Frame max', color: PALETTE[0], values: dist.thermalMax },
                 ]}
               />
+              <Caption>Two overlaid histograms — where "Frame min" and "Frame max" bars separate cleanly shows the typical temperature spread within a frame.</Caption>
             </div>
           )}
           {dist.volumes.length > 0 && (
@@ -182,6 +197,7 @@ export const Dashboard: React.FC = () => {
               <p className="muted" style={{ fontSize: '.78rem', marginTop: -6, marginBottom: 10 }}>Every computed 3D-scan volume across the loaded entries, binned.</p>
               <StatsRow values={dist.volumes} unit=" cm³" />
               <HistogramSvg unit="cm³" series={[{ label: 'Volume', color: PALETTE[2 % PALETTE.length], values: dist.volumes }]} />
+              <Caption>A wide spread (large σ relative to the mean) means tube-to-tube volume varies a lot; a tight cluster means growth was consistent.</Caption>
             </div>
           )}
         </div>
@@ -224,6 +240,7 @@ export const Dashboard: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            <Caption>"—" with a note means that tube never got a post-mission scan for the stated reason, not that its volume was zero.</Caption>
           </div>
           <div className="card pad">
             <div className="card-title"><Sprout /> Pre vs Post volume, per tube</div>
@@ -233,6 +250,7 @@ export const Dashboard: React.FC = () => {
               color={PALETTE[0]}
               points={prePost.rows.filter(r => r.pre != null && r.post != null).map(r => ({ x: r.pre!, y: r.post!, label: `T${r.tube}` }))}
             />
+            <Caption>The further above the diagonal, the more that tube grew; a point below it would mean the tube shrank.</Caption>
           </div>
           <div className="card pad">
             <div className="card-title"><TrendingUp /> Pre vs Post volume distribution</div>
@@ -244,6 +262,7 @@ export const Dashboard: React.FC = () => {
                 { label: 'Post', color: PALETTE[0], values: prePost.rows.map(r => r.post).filter((v): v is number => v != null) },
               ]}
             />
+            <Caption>A rightward shift from Pre to Post bars is the same "growth" signal as the scatter plot, viewed as a distribution instead of pairs.</Caption>
           </div>
         </div>
         );
@@ -251,7 +270,12 @@ export const Dashboard: React.FC = () => {
 
       <div className="card pad" style={{ marginBottom: 16 }}>
         <div className="card-title"><CalendarRange /> Entries over time</div>
-        {agg.byMonth.length ? <MonthBars data={agg.byMonth} /> : <p className="muted" style={{ fontSize: '.85rem' }}>No dated entries.</p>}
+        {agg.byMonth.length ? (
+          <>
+            <MonthBars data={agg.byMonth} />
+            <Caption>Grouped by the month each entry was captured (or uploaded, if no capture date is known).</Caption>
+          </>
+        ) : <p className="muted" style={{ fontSize: '.85rem' }}>No dated entries.</p>}
       </div>
 
       {agg.gps.length > 0 && (
@@ -263,6 +287,7 @@ export const Dashboard: React.FC = () => {
             points={agg.gps}
             colorFor={slug => PALETTE[Math.max(0, projectsInData.indexOf(slug)) % PALETTE.length]}
           />
+          <Caption>Country shading is a total across every geotagged entry there; each dot is one entry, colored by its source project.</Caption>
         </div>
       )}
 
@@ -277,8 +302,12 @@ export const Dashboard: React.FC = () => {
             {expFields.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
         </div>
-        {expValues.length ? <HBar data={expValues} colorFor={() => 'var(--accent)'} />
-          : <p className="muted" style={{ fontSize: '.85rem' }}>No answers recorded for this field.</p>}
+        {expValues.length ? (
+          <>
+            <HBar data={expValues} colorFor={() => 'var(--accent)'} />
+            <Caption>Every distinct answer given for this field, in this project, ranked by how often it appears.</Caption>
+          </>
+        ) : <p className="muted" style={{ fontSize: '.85rem' }}>No answers recorded for this field.</p>}
       </div>
     </div>
   );

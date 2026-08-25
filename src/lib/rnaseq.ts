@@ -106,15 +106,34 @@ export async function fetchAllMarkers(): Promise<MarkerRow[]> {
   return perTissue.flat();
 }
 
-// Gene name/EC/tissue-specificity lookup built from every marker file — the
-// only source of human-readable annotation available without the
-// (deliberately descoped) NCBI GTF + GO-ontology bridge. Coverage is sparse
-// (only genes that are a top-tau marker for some tissue), so most
-// whole-genome DE/volcano hits fall back to the bare locus tag with no tau —
-// that's a real limit of the data, not a bug.
+// Gene name/EC/tissue-specificity lookup built from every marker file.
+// Coverage is sparse (only genes that are a top-tau marker for some tissue —
+// a few hundred out of the whole genome), so most whole-genome DE/volcano
+// hits fall back to the bare locus tag with no name/tau — a real limit of
+// this particular lookup, not a bug. (fetchGoTerms() below draws on a much
+// broader annotation file — ~5,100 genes — for GO-term enrichment.)
 export interface GeneInfo { name: string; ec: string; tissue: Tissue; tau: number; }
 export function buildGeneIndex(markers: MarkerRow[]): Map<string, GeneInfo> {
   const idx = new Map<string, GeneInfo>();
   for (const m of markers) if (!idx.has(m.gene)) idx.set(m.gene, { name: m.proteinName, ec: m.ec, tissue: m.tissue, tau: m.tau });
   return idx;
+}
+
+// GO-term annotation, keyed by gene_id (the same locus tag every DE/marker/
+// WGCNA file uses) — unlike bom_ss5_functional.tsv (protein-accession-keyed,
+// no bridge to locus tags in this repo), this file already joins gene_id to
+// GO term id/name/aspect directly. ~5,100 of the genome's genes have any
+// entry here; everything else has none, which the enrichment math below
+// treats as "outside the annotated universe," not as evidence of no term.
+export type GoAspect = 'BP' | 'CC' | 'MF';
+export interface GoAnnotation { gene: string; aspect: GoAspect; termId: string; termName: string; }
+export async function fetchGoTerms(): Promise<GoAnnotation[]> {
+  const { rows } = await fetchTable('annotation/bom_ss5_terms.tsv', '\t');
+  // gene_id, protein_id, ontology (GO_BP/GO_CC/GO_MF/KEGG), term_id, term_name
+  const out: GoAnnotation[] = [];
+  for (const r of rows) {
+    const m = r[2]?.match(/^GO_(BP|CC|MF)$/);
+    if (m) out.push({ gene: r[0], aspect: m[1] as GoAspect, termId: r[3], termName: r[4] });
+  }
+  return out;
 }

@@ -1,19 +1,26 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Dna, Workflow, Filter, ScatterChart, Flame, Grid3x3, Table as TableIcon, ExternalLink } from 'lucide-react';
+import { Dna, Workflow, Filter, ScatterChart, Flame, Grid3x3, Table as TableIcon, ExternalLink, Lollipop } from 'lucide-react';
 import {
   TISSUES, DE_COMPARISONS, fetchReadBudget, fetchPca, fetchDE, fetchModuleTraits, fetchAllMarkers,
-  buildGeneIndex, type Track, type Tissue, type ReadBudgetRow, type PcaRow, type DERow,
-  type ModuleTraitCell, type MarkerRow, type GeneInfo,
+  buildGeneIndex, fetchGoTerms, type Track, type Tissue, type ReadBudgetRow, type PcaRow, type DERow,
+  type ModuleTraitCell, type MarkerRow, type GeneInfo, type GoAnnotation, type GoAspect,
 } from '../lib/rnaseq';
-import { benjaminiHochberg } from '../lib/stats';
+import { benjaminiHochberg, hypergeometricUpperTail } from '../lib/stats';
 import { readVars, mix, PALETTE } from '../lib/svgTheme';
 
 const REPO_URL = 'https://github.com/dr-richard-barker/Myco_tissue_RNAseq';
 const tissueColor = (t: string) => PALETTE[Math.max(0, TISSUES.indexOf(t as Tissue)) % PALETTE.length];
 
+// A short "how to read this" note placed under a chart/table — distinct from
+// the existing above-chart line that answers "what is this."
+const Caption: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <p className="muted" style={{ fontSize: '.72rem', marginTop: 8, marginBottom: 0 }}>{children}</p>
+);
+
 export const RnaSeq: React.FC = () => {
   const { data: markers, error: markersError, loading: markersLoading } = useAsync(fetchAllMarkers, []);
   const geneIndex = useMemo(() => buildGeneIndex(markers || []), [markers]);
+  const { data: goTerms, error: goError, loading: goLoading } = useAsync(fetchGoTerms, []);
 
   return (
     <div>
@@ -31,11 +38,13 @@ export const RnaSeq: React.FC = () => {
         <div className="card-title"><Workflow /> Analysis pipeline</div>
         <p className="muted" style={{ fontSize: '.78rem', marginTop: -6, marginBottom: 10 }}>Raw reads to systems models — the tool chain behind every chart below.</p>
         <PipelineDiagram />
+        <Caption>Boxes are pipeline stages; arrows show data flowing from raw reads through to the three downstream analyses and, from there, into the systems models.</Caption>
       </div>
 
       <ReadBudgetSection />
       <PcaSection />
       <VolcanoSection geneIndex={geneIndex} />
+      <GoEnrichmentSection goTerms={goTerms} goError={goError} goLoading={goLoading} />
       <WgcnaSection />
       <MarkerSection markers={markers} error={markersError} loading={markersLoading} />
     </div>
@@ -45,18 +54,21 @@ export const RnaSeq: React.FC = () => {
 // ---- 1. pipeline overview (static, grounded in the repo's own data_dictionary.md) ----
 const PipelineDiagram: React.FC = () => {
   const c = readVars({ '--line': '#e5e9f0', '--muted': '#5a6473', '--card': '#ffffff', '--fg': '#1a1f29' });
-  const W = 900, H = 260;
+  // Every row's y-position is derived and checked against H below rather than
+  // hand-picked — the previous version silently reused one row's height for
+  // another row's position and overflowed the viewBox by 2px as a result.
+  const W = 740, H = 224;
+  const marginX = 16, marginBottom = 14;
   const box = (x: number, y: number, w: number, h: number, label: string, sub: string, color: string, key: string) => (
     <g key={key}>
-      <rect x={x} y={y} width={w} height={h} rx={8} fill={color} fillOpacity={0.15} stroke={color} strokeWidth={1.5} />
-      <text x={x + w / 2} y={y + h / 2 - 3} fontSize={11} fontWeight={600} textAnchor="middle" fill={c['--fg']}>{label}</text>
-      <text x={x + w / 2} y={y + h / 2 + 12} fontSize={9} textAnchor="middle" fill={c['--muted']}>{sub}</text>
+      <rect x={x} y={y} width={w} height={h} rx={7} fill={color} fillOpacity={0.15} stroke={color} strokeWidth={1.3} />
+      <text x={x + w / 2} y={y + h / 2 - 3} fontSize={10} fontWeight={600} textAnchor="middle" fill={c['--fg']}>{label}</text>
+      <text x={x + w / 2} y={y + h / 2 + 11} fontSize={8} textAnchor="middle" fill={c['--muted']}>{sub}</text>
     </g>
   );
   const arrow = (x1: number, y1: number, x2: number, y2: number, key: string) => (
-    <line key={key} x1={x1} y1={y1} x2={x2} y2={y2} stroke={c['--muted']} strokeWidth={1.3} markerEnd="url(#rnaseq-arrow)" />
+    <line key={key} x1={x1} y1={y1} x2={x2} y2={y2} stroke={c['--muted']} strokeWidth={1.2} markerEnd="url(#rnaseq-arrow)" />
   );
-  const topY = 20, topH = 46, bw = 118;
   const stages: [string, string, string][] = [
     ['Raw reads', 'fastp trim', PALETTE[0]],
     ['Trimmed', 'HISAT2 align', PALETTE[1]],
@@ -68,27 +80,39 @@ const PipelineDiagram: React.FC = () => {
     ['WGCNA', 'co-expression modules', PALETTE[5]],
     ['Yanai τ', 'tissue specificity', PALETTE[6]],
   ];
-  const lastTopX = 20 + 3 * (bw + 24);
-  const branchY = 130, branchW = 150;
-  const branchXs = [W / 2 - branchW * 1.5 - 20, W / 2 - branchW / 2, W / 2 + branchW / 2 + 20];
+
+  const rowH = 38, bw = 96, stageGap = 18, branchW = 120, branchGap = 16, gemW = 150;
+  const topY = marginX - 2; // top margin, kept distinct from marginX only by convention
+  const branchY = topY + rowH + 46;
+  const gemY = branchY + rowH + 34;
+  const gemBottom = gemY + rowH;
+  // Guard the class of bug that caused the original overflow: fail loudly in
+  // dev rather than silently clip if these constants ever drift out of sync.
+  if (gemBottom + marginBottom > H) throw new Error(`PipelineDiagram: content (${gemBottom + marginBottom}) exceeds viewBox height (${H})`);
+
+  const stageXs = stages.map((_, i) => marginX + i * (bw + stageGap));
+  const lastStageCenterX = stageXs[stageXs.length - 1] + bw / 2;
+  const branchRowW = branches.length * branchW + (branches.length - 1) * branchGap;
+  const branchXs = branches.map((_, i) => (W - branchRowW) / 2 + i * (branchW + branchGap));
+  const gemX = W / 2 - gemW / 2;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 480, display: 'block' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 420, display: 'block' }}>
       <defs>
         <marker id="rnaseq-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill={c['--muted']} />
         </marker>
       </defs>
-      {stages.map(([label, sub, color], i) => box(20 + i * (bw + 24), topY, bw, topH, label, sub, color, `s${i}`))}
-      {stages.slice(0, -1).map((_, i) => arrow(20 + i * (bw + 24) + bw, topY + topH / 2, 20 + (i + 1) * (bw + 24), topY + topH / 2, `a${i}`))}
-      {branches.map(([label, sub, color], i) => box(branchXs[i], branchY, branchW, topH, label, sub, color, `b${i}`))}
+      {stages.map(([label, sub, color], i) => box(stageXs[i], topY, bw, rowH, label, sub, color, `s${i}`))}
+      {stages.slice(0, -1).map((_, i) => arrow(stageXs[i] + bw, topY + rowH / 2, stageXs[i + 1], topY + rowH / 2, `a${i}`))}
+      {branches.map(([label, sub, color], i) => box(branchXs[i], branchY, branchW, rowH, label, sub, color, `b${i}`))}
       {branches.map((_, i) => (
-        <path key={`ab${i}`} d={`M${lastTopX - bw / 2},${topY + topH} C${lastTopX - bw / 2},${branchY - 20} ${branchXs[i] + branchW / 2},${branchY - 20} ${branchXs[i] + branchW / 2},${branchY}`}
-          fill="none" stroke={c['--muted']} strokeWidth={1.3} markerEnd="url(#rnaseq-arrow)" />
+        <path key={`ab${i}`} d={`M${lastStageCenterX},${topY + rowH} C${lastStageCenterX},${branchY - 18} ${branchXs[i] + branchW / 2},${branchY - 18} ${branchXs[i] + branchW / 2},${branchY}`}
+          fill="none" stroke={c['--muted']} strokeWidth={1.2} markerEnd="url(#rnaseq-arrow)" />
       ))}
-      {box(W / 2 - 90, branchY + topH + 40, 180, topH, 'ModelSEED GEMs', 'draft → medium → gapfilled', PALETTE[7], 'gem')}
+      {box(gemX, gemY, gemW, rowH, 'ModelSEED GEMs', 'draft → medium → gapfilled', PALETTE[7], 'gem')}
       {branchXs.map((x, i) => (
-        <line key={`ag${i}`} x1={x + branchW / 2} y1={branchY + topH} x2={W / 2} y2={branchY + topH + 40} stroke={c['--muted']} strokeWidth={1.3} markerEnd="url(#rnaseq-arrow)" />
+        <line key={`ag${i}`} x1={x + branchW / 2} y1={branchY + rowH} x2={W / 2} y2={gemY} stroke={c['--muted']} strokeWidth={1.2} markerEnd="url(#rnaseq-arrow)" />
       ))}
     </svg>
   );
@@ -168,6 +192,7 @@ const ReadBudgetSection: React.FC = () => {
           <div className="row wrap muted" style={{ gap: 12, fontSize: '.74rem', marginTop: 8 }}>
             {byTissue.map(t => <span key={t.tissue}>{t.tissue}: {t.pct.toFixed(1)}% mRNA, {Math.round(t.det10)} genes ≥10 reads (n={t.n})</span>)}
           </div>
+          <Caption>Taller "raw" bars with a thin "mRNA" sliver mean most reads were lost to rRNA before ever reaching a gene — that tissue's read budget is worth watching.</Caption>
         </div>
       )}
     </div>
@@ -229,6 +254,7 @@ const PcaSection: React.FC = () => {
               </span>
             ))}
           </div>
+          <Caption>Points that cluster tightly by color grew consistently within that tissue; a point far from its own color's cluster is an outlier library worth a second look.</Caption>
         </>
       )}
     </div>
@@ -366,7 +392,10 @@ const VolcanoSection: React.FC<{ geneIndex: Map<string, GeneInfo> }> = ({ geneIn
       {loading && <p className="muted" style={{ fontSize: '.85rem' }}>Loading…</p>}
       {error && <ErrorBanner message={error} />}
       {data && data.length > 0 && (
-        <VolcanoSvg rows={data} geneIndex={geneIndex} selectedGenes={selectedGeneSet} onSelect={setSelected} onHover={setHover} />
+        <>
+          <VolcanoSvg rows={data} geneIndex={geneIndex} selectedGenes={selectedGeneSet} onSelect={setSelected} onHover={setHover} />
+          <Caption>Genes far to the left/right changed the most; genes near the top were the most statistically confident. Red = both.</Caption>
+        </>
       )}
       {hover && (
         <div style={{
@@ -402,6 +431,174 @@ const VolcanoSection: React.FC<{ geneIndex: Map<string, GeneInfo> }> = ({ geneIn
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ---- GO-term enrichment (hypergeometric, BH-FDR corrected) ----
+interface EnrichedTerm { termId: string; termName: string; k: number; K: number; q: number; }
+const isSigDE = (r: DERow) => r.padj < 0.05 && Math.abs(r.log2FoldChange) > 1;
+
+// Universe = tested genes with >=1 annotation in this aspect; foreground =
+// the significant subset of that universe (same threshold the volcano plot
+// highlights). Per term: hypergeometric over-representation p, then BH-FDR
+// across every term actually tested for this comparison+aspect.
+function enrichTerms(deRows: DERow[], goByGene: Map<string, GoAnnotation[]>, aspect: GoAspect): EnrichedTerm[] {
+  const universe = deRows.filter(r => (goByGene.get(r.gene) || []).some(a => a.aspect === aspect));
+  const foreground = universe.filter(isSigDE);
+  const N = universe.length, n = foreground.length;
+  if (!N || !n) return [];
+
+  const termInfo = new Map<string, { name: string; K: number; k: number }>();
+  const countFor = (rows: DERow[], key: 'K' | 'k') => {
+    for (const r of rows) {
+      const seen = new Set<string>();
+      for (const a of goByGene.get(r.gene) || []) {
+        if (a.aspect !== aspect || seen.has(a.termId)) continue;
+        seen.add(a.termId);
+        const t = termInfo.get(a.termId) || { name: a.termName, K: 0, k: 0 };
+        t[key]++;
+        termInfo.set(a.termId, t);
+      }
+    }
+  };
+  countFor(universe, 'K');
+  countFor(foreground, 'k');
+
+  const terms = [...termInfo.entries()].filter(([, t]) => t.k > 0);
+  const qvals = benjaminiHochberg(terms.map(([, t]) => hypergeometricUpperTail(t.k, t.K, n, N)));
+  return terms.map(([termId, t], i) => ({ termId, termName: t.name, k: t.k, K: t.K, q: qvals[i] })).sort((a, b) => a.q - b.q);
+}
+
+const LollipopSvg: React.FC<{ terms: EnrichedTerm[] }> = ({ terms }) => {
+  const c = readVars({ '--line': '#e5e9f0', '--muted': '#5a6473', '--accent': '#3b6ea5' });
+  const W = 640, rowH = 24, padL = 260, padR = 50, padT = 10, padB = 26;
+  const H = padT + terms.length * rowH + padB;
+  const maxX = Math.max(1, ...terms.map(t => -Math.log10(Math.max(t.q, 1e-300))));
+  const sx = (v: number) => padL + (v / maxX) * (W - padL - padR);
+  const maxK = Math.max(1, ...terms.map(t => t.k));
+  const radius = (k: number) => 3 + (k / maxK) * 5;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 420, display: 'block' }}>
+      <line x1={padL} y1={padT} x2={padL} y2={H - padB + 4} stroke={c['--line']} strokeWidth={0.75} />
+      {terms.map((t, i) => {
+        const y = padT + i * rowH + rowH / 2;
+        const x = sx(-Math.log10(Math.max(t.q, 1e-300)));
+        const label = t.termName.length > 34 ? t.termName.slice(0, 32) + '…' : t.termName;
+        return (
+          <g key={t.termId}>
+            <text x={padL - 8} y={y + 3} fontSize={9} textAnchor="end" fill={c['--muted']}>{label}</text>
+            <line x1={padL} y1={y} x2={x} y2={y} stroke={c['--accent']} strokeWidth={1.5} />
+            <circle cx={x} cy={y} r={radius(t.k)} fill={c['--accent']}>
+              <title>{`${t.termName} (${t.termId}) — ${t.k}/${t.K} genes, q=${t.q.toExponential(2)}`}</title>
+            </circle>
+          </g>
+        );
+      })}
+      <text x={(padL + W - padR) / 2} y={H - 6} fontSize={9} textAnchor="middle" fill={c['--muted']}>-log10(q)</text>
+    </svg>
+  );
+};
+
+const GoEnrichmentSection: React.FC<{ goTerms: GoAnnotation[] | null; goError: string | null; goLoading: boolean }> = ({ goTerms, goError, goLoading }) => {
+  const [track, setTrack] = useState<Track>('rRNArm');
+  const [pairIdx, setPairIdx] = useState(0);
+  const [aspect, setAspect] = useState<GoAspect>('BP');
+  const [a, b] = DE_COMPARISONS[pairIdx];
+  const { data: deData, error: deError, loading: deLoading } = useAsync(() => fetchDE(a, b, track), [a, b, track]);
+
+  const goByGene = useMemo(() => {
+    const m = new Map<string, GoAnnotation[]>();
+    for (const g of goTerms || []) { const arr = m.get(g.gene) || []; arr.push(g); m.set(g.gene, arr); }
+    return m;
+  }, [goTerms]);
+
+  const terms = useMemo(() => (deData && goByGene.size ? enrichTerms(deData, goByGene, aspect).slice(0, 15) : []), [deData, goByGene, aspect]);
+
+  // Cross-comparison view: all 6 comparisons for the current track, fetched
+  // once (each already cached individually by fetchDE if visited via the
+  // volcano/lollipop dropdown above).
+  const [allComparisons, setAllComparisons] = useState<Map<string, DERow[]> | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setAllComparisons(null);
+    Promise.all(DE_COMPARISONS.map(([x, y]) => fetchDE(x, y, track).then(rows => [`${x} vs ${y}`, rows] as const)))
+      .then(pairs => { if (alive) setAllComparisons(new Map(pairs)); })
+      .catch(() => { if (alive) setAllComparisons(null); });
+    return () => { alive = false; };
+  }, [track]);
+
+  const crossTable = useMemo(() => {
+    if (!allComparisons || !goByGene.size) return null;
+    const perComparison = [...allComparisons.entries()].map(([label, rows]) => ({ label, terms: enrichTerms(rows, goByGene, aspect) }));
+    const topTermIds = new Set<string>();
+    const nameById = new Map<string, string>();
+    for (const { terms: ts } of perComparison) for (const t of ts.slice(0, 5)) { topTermIds.add(t.termId); nameById.set(t.termId, t.termName); }
+    const rows = [...topTermIds].map(id => ({
+      termId: id, termName: nameById.get(id)!,
+      cells: perComparison.map(({ label, terms: ts }) => ({ label, q: ts.find(t => t.termId === id)?.q ?? null })),
+    }));
+    return { columns: perComparison.map(p => p.label), rows };
+  }, [allComparisons, goByGene, aspect]);
+
+  return (
+    <div className="card pad" style={{ marginBottom: 16 }}>
+      <div className="row wrap sb" style={{ justifyContent: 'space-between', gap: 8, marginBottom: -2 }}>
+        <div className="card-title"><Lollipop /> GO-term enrichment</div>
+        <div className="row wrap" style={{ gap: 8 }}>
+          <select className="select" style={{ width: 'auto' }} value={pairIdx} onChange={e => setPairIdx(Number(e.target.value))}>
+            {DE_COMPARISONS.map(([x, y], i) => <option key={i} value={i}>{x} vs {y}</option>)}
+          </select>
+          <select className="select" style={{ width: 'auto' }} value={aspect} onChange={e => setAspect(e.target.value as GoAspect)}>
+            <option value="BP">Biological process</option>
+            <option value="CC">Cellular component</option>
+            <option value="MF">Molecular function</option>
+          </select>
+          <select className="select" style={{ width: 'auto' }} value={track} onChange={e => setTrack(e.target.value as Track)}>
+            <option value="rRNArm">rRNA-removed</option>
+            <option value="all_genes">All genes</option>
+          </select>
+        </div>
+      </div>
+      <p className="muted" style={{ fontSize: '.78rem', marginTop: 4, marginBottom: 10 }}>
+        Hypergeometric over-representation test (BH-FDR corrected) on the volcano plot's significant DEGs, against tested genes with at least one annotation in this aspect.
+      </p>
+      {(goLoading || deLoading) && <p className="muted" style={{ fontSize: '.85rem' }}>Loading…</p>}
+      {(goError || deError) && <ErrorBanner message={goError || deError || ''} />}
+      {terms.length > 0
+        ? <LollipopSvg terms={terms} />
+        : (!goLoading && !deLoading && <p className="muted" style={{ fontSize: '.85rem' }}>No enriched terms for this comparison/aspect.</p>)}
+      <Caption>Dot size = DEGs carrying that term. Only the ~5,100 genes with any Swiss-Prot-derived GO annotation count toward either side of the test — everything else is outside the annotated universe, not evidence of "no effect."</Caption>
+
+      {crossTable && crossTable.rows.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <strong style={{ fontSize: '.85rem' }}>Recurring terms across comparisons</strong>
+          <p className="muted" style={{ fontSize: '.76rem', marginTop: 2, marginBottom: 8 }}>Union of each comparison's top 5 terms in this aspect; blank means not among that comparison's top hits.</p>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="mono" style={{ width: '100%', fontSize: '.74rem', borderCollapse: 'collapse' }}>
+              <thead><tr style={{ textAlign: 'left' }}><th>Term</th>{crossTable.columns.map(col => <th key={col} style={{ textAlign: 'center' }}>{col}</th>)}</tr></thead>
+              <tbody>
+                {crossTable.rows.map(r => (
+                  <tr key={r.termId} style={{ borderTop: '1px solid var(--line)' }}>
+                    <td>{r.termName}</td>
+                    {r.cells.map(cell => {
+                      const sig = cell.q != null && cell.q < 0.05;
+                      const t = cell.q != null ? Math.min(1, -Math.log10(Math.max(cell.q, 1e-10)) / 8) : 0;
+                      return (
+                        <td key={cell.label} style={{ textAlign: 'center', background: sig ? mix('#ffffff', PALETTE[0], t) : undefined }}>
+                          {cell.q != null ? (-Math.log10(cell.q)).toFixed(1) : '—'}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Caption>Cell value is -log10(q); darker means more significant. Fetches all 6 comparisons once per track, cached after that.</Caption>
         </div>
       )}
     </div>
@@ -467,6 +664,7 @@ const WgcnaSection: React.FC = () => {
           </table>
         </div>
       )}
+      <Caption>Redder cells are negatively correlated with that tissue, tealer cells positively; * only marks pairs that survive FDR correction across every test shown.</Caption>
     </div>
   );
 };
@@ -489,8 +687,8 @@ const MarkerSection: React.FC<{ markers: MarkerRow[] | null; error: string | nul
       </div>
       <p className="muted" style={{ fontSize: '.78rem', marginTop: 4, marginBottom: 10 }}>
         Top marker genes by Yanai τ (tissue specificity) per tissue. Protein name and EC (molecular function) are shown when a
-        Swiss-Prot homolog was found — blank otherwise, not guessed. <strong>No cellular-localization column</strong>: that needs a
-        locus-tag↔protein-accession bridge (the genome's stock GTF) that isn't in the repo's results — descoped for this version.
+        Swiss-Prot homolog was found — blank otherwise, not guessed. No cellular-component column here yet, though the GO-term
+        enrichment section below does draw on that same annotation per gene.
       </p>
       {loading && <p className="muted" style={{ fontSize: '.85rem' }}>Loading…</p>}
       {error && <ErrorBanner message={error} />}
@@ -516,6 +714,7 @@ const MarkerSection: React.FC<{ markers: MarkerRow[] | null; error: string | nul
           </table>
         </div>
       )}
+      <Caption>τ close to 1 means expression is essentially restricted to this tissue; sort/filter to compare how "sharp" each tissue's top markers really are.</Caption>
     </div>
   );
 };
