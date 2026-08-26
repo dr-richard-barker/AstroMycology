@@ -776,7 +776,14 @@ function prePostAggregates(entries: Ec5Entry[], toolResults: AnalysisResult[]): 
     if (!st || !e.scanUrl) continue;
     const row = byTube.get(st.tube) || { pre: null, post: null, note: null };
     const raw = volumeByRef.get(`${e.project}::${e.uuid}`)?.metrics['Volume'];
-    const v = raw != null ? parseFloat(String(raw)) : NaN;
+    let v = raw != null ? parseFloat(String(raw)) : NaN;
+    // Fall back to a precomputed volume_cm3 in the dataset's own metadata when
+    // nobody has run "Compute volumes" in this browser yet — live compute
+    // (same deterministic mesh math) always takes precedence when present.
+    if (Number.isNaN(v)) {
+      const volField = e.fields.find(f => f.name.toLowerCase() === 'volume_cm3' || f.name.toLowerCase() === 'volume cm3');
+      if (volField) v = parseFloat(volField.value);
+    }
     if (!Number.isNaN(v)) row[st.stage] = v;
     const noteField = e.fields.find(f => f.name.toLowerCase() === 'notes');
     if (noteField?.value) row.note = noteField.value;

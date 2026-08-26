@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Database as DbIcon, UploadCloud, Share2, Info, Search, Menu, X, Sun, Moon, Sprout, AlertTriangle, BarChart3, Ruler, ClipboardList, BookText, ShieldCheck, LogOut, Library, Table, Dna } from 'lucide-react';
+import { Database as DbIcon, UploadCloud, Share2, Info, Search, Menu, X, Sun, Moon, Sprout, AlertTriangle, BarChart3, Ruler, ClipboardList, BookText, ShieldCheck, LogOut, Library, Table, Dna, FlaskConical } from 'lucide-react';
 import { TOOLS, toolById } from './tools';
 import type { Ec5Entry, MarkerAnalysis, CollectionStats, ThermalReading } from './types';
 import type { ContaminationResult } from './lib/contamination';
@@ -16,6 +16,7 @@ import { Scan3DViewer } from './components/Scan3DViewer';
 import { MetadataReview } from './components/MetadataReview';
 import { Datasets } from './components/Datasets';
 import { RnaSeq } from './components/RnaSeq';
+import { BgcAtlas } from './components/BgcAtlas';
 import { Admin } from './components/Admin';
 import { AuthGate } from './components/AuthGate';
 import { MetadataEditor } from './components/MetadataEditor';
@@ -29,6 +30,7 @@ const NAV: { id: Tab; label: string; sub: string; icon: React.ComponentType<any>
   { id: 'database', label: 'Database', sub: 'Browse & analyze', icon: DbIcon },
   { id: 'dashboard', label: 'Dashboard', sub: 'Metadata analytics', icon: BarChart3 },
   { id: 'rnaseq', label: 'RNA-seq', sub: 'Tissue expression atlas', icon: Dna },
+  { id: 'bgc-atlas', label: 'BGC Atlas', sub: 'Fungal biosynthesis explorer', icon: FlaskConical },
   { id: 'datasets', label: 'Datasets', sub: 'Provenance & citations', icon: Library },
   { id: 'metadata', label: 'Metadata review', sub: 'Conserved vs variant', icon: ClipboardList },
   { id: 'enrich', label: 'Enrich', sub: 'Generate sidecars', icon: Table },
@@ -242,6 +244,8 @@ function AppInner({ auth }: { auth: AuthState }) {
             <Dashboard />
           ) : tab === 'rnaseq' ? (
             <RnaSeq />
+          ) : tab === 'bgc-atlas' ? (
+            <BgcAtlas />
           ) : tab === 'datasets' ? (
             <Datasets projects={visibleProjects} onOpen={changeActive} />
           ) : tab === 'metadata' ? (
