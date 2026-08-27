@@ -6,9 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="A mushroom imaging database — RGB photos, RGB-thermal photos, and 3D scans — with an in-browser 3D viewer/analysis tool and client-side calibration-marker scale & colour recovery." />
     <title>AstroMycology — Image &amp; 3D Scan Database</title>
+    <!-- CoSE Theme & DeepSpaceAg Hub Integration -->
+    <link rel="stylesheet" href="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/cose-theme.css" />
+    <link rel="stylesheet" href="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/cose-chrome.css" />
+    <link rel="stylesheet" href="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/cose-map.css" />
+    <style>
+      /* Layering CoSE rails above page components */
+      .topbar.cose-dark, .topbar.cose-light { z-index: 10001 !important; }
+      .sitebar.cose-dark, .sitebar.cose-light { z-index: 10000 !important; }
+      .map-scrim { z-index: 9999 !important; }
+    </style>
   </head>
-  <body>
+  <body data-site-id="AstroMycology" data-brand-logo="cose/cose-logo.png">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- CoSE Theme Integration Scripts -->
+    <script src="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/sites.js"></script>
+    <script src="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/theme.js"></script>
   </body>
 </html>
