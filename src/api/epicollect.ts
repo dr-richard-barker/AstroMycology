@@ -25,6 +25,7 @@ export interface ProjectRef {
   slug: string; name: string; type?: 'ec5' | 'github' | 'local' | 'cloud';
   gh?: GhTarget; metaUrl?: string;
   formRef?: string;
+  branchRef?: string;
   reference?: { text: string; url: string };
   // Curated provenance for the Datasets tab.
   provenance?: { organism?: string; conditions?: string; description?: string; source?: string };
@@ -65,6 +66,14 @@ const BUILTIN: ProjectRef[] = [
     gh: { owner: 'dr-richard-barker', repo: 'AstroMycology', ref: 'main', path: 'datasets/mdrs-pre-post-mission' },
     reference: { text: 'Blue Oyster (Pleurotus ostreatus) grow-tube 3D scans taken before and after an analog-astronaut mission rotation at the Mars Desert Research Station (MDRS). Tube 3 exploded in transit on the way home; tube 5 was too contaminated to bring on the mission and was left at Purdue — neither has a post-mission scan.', url: 'https://github.com/dr-richard-barker/AstroMycology/tree/main/datasets/mdrs-pre-post-mission' },
     provenance: { organism: 'Pleurotus ostreatus (Blue Oyster)', conditions: '8 tubes scanned pre-mission (2025-02-03), 6 rescanned post-mission (2025-04-28); Revopoint structured-light mesh scans', description: '14 3D scans (binary PLY) — a before/after volume comparison across an MDRS mission rotation.', source: 'datasets/mdrs-pre-post-mission in this repo' },
+  },
+  {
+    slug: 'mycoponics-porterfield',
+    name: 'Pharma Mycoponics Summer 26 (Tube Observations)', type: 'ec5',
+    formRef: '8a09dbeef84443df91d134da7b71b9e2_6a738dc33d46e',
+    branchRef: '8a09dbeef84443df91d134da7b71b9e2_6a738dc33d46e_6a73c6a20258a',
+    reference: { text: 'Blue Oyster mushroom mycoponics systems data from the Pharma Mycoponics Summer 26 collaboration.', url: 'https://github.com/aymarizwan2027/pharma-mycoponics-summer26' },
+    provenance: { organism: 'Pleurotus ostreatus (Blue Oyster)', conditions: 'Mycoponics chamber cultivation', description: '828 tube records pulled natively via EpiCollect5 API branch pagination.', source: 'EpiCollect5 Project: Mycoponics Porterfield' },
   },
 ];
 
@@ -280,6 +289,9 @@ async function fetchOne(slug: string, page: number, perPage: number): Promise<On
   let url = `${EC5_BASE}/api/export/entries/${encodeURIComponent(slug)}?per_page=${perPage}&page=${page}&format=json`;
   if (src?.formRef) {
     url += `&form_ref=${encodeURIComponent(src.formRef)}`;
+  }
+  if (src?.branchRef) {
+    url += `&branch_ref=${encodeURIComponent(src.branchRef)}`;
   }
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
   if (res.status === 429) throw new Error('rate limit reached (5 req/min) — wait a moment');
