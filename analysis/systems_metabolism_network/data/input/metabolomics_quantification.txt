@@ -1,0 +1,82 @@
+Feature	logFC
+N-Acetylmuramoyl-Ala	-0.3783
+Octadecanamide	-0.1970
+1,2-Dihydroxydibenzothiophene	0.1541
+beta-Funaltrexamine	-0.1262
+Fenpropimorph	-0.1174
+Hellebrin	-0.0901
+Firocoxib	-0.0871
+L791456	-0.0859
+Thienamycin	-0.0849
+Eudesobovatol A	-0.0785
+Strictosamide	-0.0754
+Rhodoxanthin	-0.0729
+Zafirlukast	-0.0726
+Teasterone	-0.0715
+Scabraside	0.0715
+Thermocryptoxanthin-11	-0.0696
+Cefroxadine	-0.0685
+Cinobufotalin	-0.0666
+Aflatoxin B1 diol	-0.0655
+6beta,17beta-Dihydroxyandrost-4-en-3-one diacetate	-0.0654
+Ovatifolin	-0.0644
+Apodine	-0.0640
+Taccalonolide A	-0.0637
+Divinyl chlorophyllide a	-0.0619
+N8,N'8-Citryl-bis(spermidine)	-0.0588
+Lappaol C	-0.0582
+Ajugasterone C	-0.0581
+Ceceline	-0.0563
+k-Strophanthin-beta	-0.0560
+Anabaenopeptilide 90B	0.0557
+Salannin	-0.0552
+Bromocriptine	-0.0549
+2-O-(beta-D-Mannosyl-(1->2)-beta-D-mannosyl)-bis(myo-inositol) 1,3'-phosphate	0.0543
+7''-O-Phosphohygromycin	-0.0533
+Catharine	-0.0530
+3-Dehydroecdysone	-0.0523
+Acarbose 7IV-phosphate	0.0518
+Brucine	-0.0515
+Vobtusine	-0.0514
+DSLET	-0.0510
+Pinoresinol diglucoside	0.0482
+6-Thiourate	-0.6875
+Hypercalin B	0.6272
+(-)-Pinoresinol glucoside	0.4922
+Hydroxyheme I	0.2782
+Pinoresinol diglucoside	0.2227
+3-(3'-Methylthio)propylmalic acid	0.1715
+Pregna-4,16-diene-3,11,20-trione	-0.1683
+O-Phospho-L-serine	-0.1549
+3-Hydroxyquinine	-0.1455
+(7S,8S)-DiHODE	-0.1227
+Divostroside	0.1007
+Macrozamin	0.0981
+2,2-Dimethyl-3-(4-methoxyphenyl)-4-ethyl-2H-1-benzopyran-7-ol acetate	-0.0935
+3-Carboxy-2-hydroxymuconate semialdehyde	-0.0906
+Lichenin	0.0870
+4'-Cinnamoylmussatioside	0.0837
+3-Methoxy-4-hydroxymandelate	-0.0835
+1-Tuberculosinyladenosine	0.0767
+2,5-Dioxopentanoate	0.0750
+Soyasapogenol E	0.0740
+Tabtoxinine-delta-lactam	-0.0702
+Butopyronoxyl	-0.0694
+Ticarcillin disodium	0.0685
+MM 4550	0.0666
+27-O-Demethylrifamycin SV	0.0653
+Hydralazine	0.0648
+5beta-Cyprinolsulfate	0.0638
+3-Hydroxy-19-norpregna-1,3,5(10)-trien-20-one	-0.0630
+Pyridarone	-0.0623
+Harringtonine	0.0606
+Cucurbitacin P	0.0596
+Chrysophanic acid 9-anthrone	-0.0582
+Demethylphylloquinol	0.0577
+Sethoxydim	-0.0567
+Isodictamnine	-0.0547
+beta-Maltose	-0.0543
+Urdamycin A	0.0537
+Propafenone	-0.0533
+Rottlerin	-0.0522
+Dichlobenil	-0.0516
