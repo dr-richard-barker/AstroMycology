@@ -60,7 +60,20 @@ export function DESIDashboard() {
           const text = await res.text();
           const lines = text.split('\n').filter(l => l.trim().length > 0).slice(1);
           return lines.map(l => {
-            const cols = l.split(',');
+            let cols: string[] = [];
+            let inQuotes = false;
+            let current = "";
+            for (let i = 0; i < l.length; i++) {
+              if (l[i] === '"') inQuotes = !inQuotes;
+              else if (l[i] === ',' && !inQuotes) {
+                cols.push(current);
+                current = "";
+              } else {
+                current += l[i];
+              }
+            }
+            cols.push(current);
+            
             return {
               mz: parseFloat(cols[0]) || 0,
               cont: parseFloat(cols[1]) || 0,
