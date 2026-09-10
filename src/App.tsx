@@ -33,6 +33,7 @@ const NAV: { id: Tab; label: string; sub: string; icon: React.ComponentType<any>
   { id: 'desi-ms', label: 'DESI-MS Analysis', sub: 'Metabolomics insights', icon: FlaskConical },
   { id: 'rnaseq', label: 'RNA-seq', sub: 'Tissue expression atlas', icon: Dna },
   { id: 'bgc-atlas', label: 'BGC Atlas', sub: 'Fungal biosynthesis explorer', icon: FlaskConical },
+  { id: 'systems', label: 'Systems Metabolism', sub: 'Knowledge graph network', icon: Share2 },
   { id: 'datasets', label: 'Datasets', sub: 'Provenance & citations', icon: Library },
   { id: 'metadata', label: 'Metadata review', sub: 'Conserved vs variant', icon: ClipboardList },
   { id: 'enrich', label: 'Enrich', sub: 'Generate sidecars', icon: Table },
@@ -250,6 +251,9 @@ function AppInner({ auth }: { auth: AuthState }) {
             <RnaSeq />
           ) : tab === 'bgc-atlas' ? (
             <BgcAtlas />
+          ) : tab === 'systems' ? (
+            <iframe src={`${import.meta.env.BASE_URL}knowledge_graph.html`} className="w-full h-[calc(100vh-80px)] border-0" title="Systems Metabolism Knowledge Graph" />
+
           ) : tab === 'datasets' ? (
             <Datasets projects={visibleProjects} onOpen={changeActive} />
           ) : tab === 'metadata' ? (
