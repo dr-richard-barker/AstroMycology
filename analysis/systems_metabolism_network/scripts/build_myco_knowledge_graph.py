@@ -276,11 +276,11 @@ def generate_html():
                         'background-color': 'data(color)',
                         'label': 'data(label)',
                         'shape': 'data(shape)',
-                        'font-size': '10px',
+                        'font-size': '14px',
                         'text-wrap': 'wrap',
-                        'text-max-width': '80px',
-                        'width': '60px',
-                        'height': '60px',
+                        'text-max-width': '110px',
+                        'width': '90px',
+                        'height': '90px',
                         'text-valign': 'center',
                         'text-halign': 'center',
                         'color': '#000',
@@ -291,16 +291,16 @@ def generate_html():
                 {{
                     selector: 'node[group="metabolite"]',
                     style: {{
-                        'width': '40px',
-                        'height': '30px',
-                        'font-size': '8px'
+                        'width': '65px',
+                        'height': '45px',
+                        'font-size': '12px'
                     }}
                 }},
                 {{
                     selector: 'node[group="process"]',
                     style: {{
-                        'width': '70px',
-                        'height': '70px',
+                        'width': '100px',
+                        'height': '100px',
                         'color': 'darkgreen',
                         'font-weight': 'bold'
                     }}
@@ -308,8 +308,8 @@ def generate_html():
                 {{
                     selector: 'node[group="compartment"]',
                     style: {{
-                        'width': '80px',
-                        'height': '70px',
+                        'width': '120px',
+                        'height': '100px',
                         'color': 'indigo',
                         'font-weight': 'bold'
                     }}
@@ -324,7 +324,7 @@ def generate_html():
                         'target-arrow-shape': 'triangle',
                         'curve-style': 'bezier',
                         'label': 'data(relation)',
-                        'font-size': '8px',
+                        'font-size': '12px',
                         'text-rotation': 'autorotate',
                         'text-margin-y': -10,
                         'text-opacity': 0.8
@@ -333,14 +333,14 @@ def generate_html():
             ],
             layout: {{
                 name: 'cose',
-                idealEdgeLength: 100,
+                idealEdgeLength: 150,
                 nodeOverlap: 20,
                 refresh: 20,
                 fit: true,
                 padding: 30,
                 randomize: true,
-                componentSpacing: 100,
-                nodeRepulsion: 400000,
+                componentSpacing: 200,
+                nodeRepulsion: 800000,
                 edgeElasticity: 100,
                 nestingFactor: 5,
                 gravity: 80,

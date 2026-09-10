@@ -210,7 +210,7 @@ function AppInner({ auth }: { auth: AuthState }) {
           </button>
         </header>
 
-        <main className="content" style={activeTool ? { padding: 0 } : undefined}>
+        <main className="content" style={activeTool || tab === 'systems' ? { padding: 0 } : undefined}>
           {activeTool && <Scan3DViewer launch={toolLaunch} />}
           {!activeTool && <>
           {isDemoProject(active) && tab === 'database' && (
@@ -252,7 +252,7 @@ function AppInner({ auth }: { auth: AuthState }) {
           ) : tab === 'bgc-atlas' ? (
             <BgcAtlas />
           ) : tab === 'systems' ? (
-            <iframe src={`${import.meta.env.BASE_URL}knowledge_graph.html`} className="w-full h-[calc(100vh-80px)] border-0" title="Systems Metabolism Knowledge Graph" />
+            <iframe src={`${import.meta.env.BASE_URL}knowledge_graph.html`} style={{ width: "100%", height: "calc(100vh - 44px)", display: "block", border: "none" }} title="Systems Metabolism Knowledge Graph" />
 
           ) : tab === 'datasets' ? (
             <Datasets projects={visibleProjects} onOpen={changeActive} />
