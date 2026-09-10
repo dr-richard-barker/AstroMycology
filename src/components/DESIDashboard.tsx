@@ -56,6 +56,7 @@ export function DESIDashboard() {
         // Fetch and parse Spectra
         const parseSpectra = async (url: string) => {
           const res = await fetch(url);
+          if (!res.ok) return []; // Fallback if file missing
           const text = await res.text();
           const lines = text.split('\n').filter(l => l.trim().length > 0).slice(1);
           return lines.map(l => {
@@ -65,13 +66,21 @@ export function DESIDashboard() {
               cont: parseFloat(cols[1]) || 0,
               ex: parseFloat(cols[2]) || 0,
               dif: parseFloat(cols[4]) || 0,
-              enrichment: cols[5]?.trim() || ''
+              enrichment: cols[5]?.trim() || '',
+              annotation: cols[6]?.trim() || '' // New column
             };
-          }).filter(r => Math.abs(r.dif) > 0.05).sort((a, b) => Math.abs(b.dif) - Math.abs(a.dif)); // Sort by magnitude of difference
+          }).filter(r => Math.abs(r.dif) > 0.05).sort((a, b) => Math.abs(b.dif) - Math.abs(a.dif));
         };
 
-        setPosSpectra(await parseSpectra(`${import.meta.env.BASE_URL}desi-ms/Spectra_Pos.csv`));
-        setNegSpectra(await parseSpectra(`${import.meta.env.BASE_URL}desi-ms/Spectra_Neg.csv`));
+        // Try to fetch annotated first, fallback to raw
+        let pos = await parseSpectra(`${import.meta.env.BASE_URL}desi-ms/Annotated_Spectra_Pos.csv`);
+        if (pos.length === 0) pos = await parseSpectra(`${import.meta.env.BASE_URL}desi-ms/Spectra_Pos.csv`);
+        
+        let neg = await parseSpectra(`${import.meta.env.BASE_URL}desi-ms/Annotated_Spectra_Neg.csv`);
+        if (neg.length === 0) neg = await parseSpectra(`${import.meta.env.BASE_URL}desi-ms/Spectra_Neg.csv`);
+
+        setPosSpectra(pos);
+        setNegSpectra(neg);
         
       } catch (err) {
         console.error("Failed to load DESI-MS data:", err);
@@ -97,9 +106,10 @@ export function DESIDashboard() {
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
               <th style={{ padding: '8px 4px' }}>m/z</th>
+              <th style={{ padding: '8px 4px' }}>Putative ID</th>
               <th style={{ padding: '8px 4px' }}>Enrichment</th>
-              <th style={{ padding: '8px 4px' }}>Control Intensity</th>
-              <th style={{ padding: '8px 4px' }}>Exp Intensity</th>
+              <th style={{ padding: '8px 4px' }}>Control</th>
+              <th style={{ padding: '8px 4px' }}>Exp</th>
               <th style={{ padding: '8px 4px' }}>Diff Profile</th>
             </tr>
           </thead>
@@ -107,12 +117,17 @@ export function DESIDashboard() {
             {data.slice(0, 15).map((row, i) => (
               <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
                 <td style={{ padding: '8px 4px', fontWeight: 'bold' }}>{row.mz.toFixed(3)}</td>
+                <td style={{ padding: '8px 4px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.annotation || 'Unknown'}>
+                  {row.annotation && row.annotation !== 'No matches in KEGG' ? (
+                    <span style={{ fontSize: '0.85em', color: 'var(--accent)' }}>{row.annotation.split('||')[0]}</span>
+                  ) : <span style={{ color: 'var(--text-muted)' }}>Unknown</span>}
+                </td>
                 <td style={{ padding: '8px 4px' }}>
-                  {row.enrichment === 'Ex' ? <span style={{ color: 'var(--accent2)', fontWeight: 'bold' }}>Experimental</span> : row.enrichment === 'Cont' ? <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>Control</span> : '-'}
+                  {row.enrichment === 'Ex' ? <span style={{ color: 'var(--accent2)', fontWeight: 'bold' }}>Exp</span> : row.enrichment === 'Cont' ? <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>Cont</span> : '-'}
                 </td>
                 <td style={{ padding: '8px 4px' }}>{row.cont.toFixed(3)}</td>
                 <td style={{ padding: '8px 4px' }}>{row.ex.toFixed(3)}</td>
-                <td style={{ padding: '8px 4px', width: 120 }}>
+                <td style={{ padding: '8px 4px', width: 100 }}>
                   <div style={{ display: 'flex', alignItems: 'center', height: 16, backgroundColor: 'var(--bg-inset)', borderRadius: 2, overflow: 'hidden' }}>
                      {row.dif > 0 ? (
                        <div style={{ marginLeft: '50%', width: `${Math.min(row.dif * 100, 50)}%`, height: '100%', backgroundColor: 'var(--accent2)' }} />

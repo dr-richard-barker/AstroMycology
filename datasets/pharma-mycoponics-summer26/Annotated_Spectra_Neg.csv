@@ -1,0 +1,51 @@
+m/z,Cont,Ex,Unnamed: 3,Dif,Y/N,Putative_Metabolites
+183.015,1.0,0.312457351857412,,-0.6875426481425879,,"[M-H]-: 6-Thiourate | 3,4-Dihydroxymandelate | 4-Deoxy-4-sulfo-D-erythrulose | 2,4-Dinitrophenol | 3,4,5-Trihydroxyphenylacetate | L-3,4-Dihydroxybutan-2-one 4-phosphate | 3-Phosphonooxypyruvate | 2-Pyrone-4,"
+517.338999999999,0.372833550680315,1.0,,0.627166449319685,,[M-H]-: Hypercalin B | Deacetylcucurbitacin C | Cucurbitacin O | Hodgkinsine | 13-beta-D-Glucosyloxydocosanoate | Cucurbitacin F
+519.177,0.0,0.492236088419591,,0.492236088419591,Ex,[M-H]-: (-)-Pinoresinol glucoside | Brusatol | Mometasone furoate | Beclomethasone dipropionate | Matairesinoside | Chryso-obtusin glucoside
+869.321,0.0,0.278165320772521,,0.278165320772521,Ex,[M-H]-: Hydroxyheme I
+518.343,0.129300296592076,0.364825859104184,,0.235525562512108,,No matches in KEGG
+681.238999999999,0.0,0.222673019858925,,0.222673019858925,Ex,[M-H]-: Pinoresinol diglucoside | Bruceoside A
+221.073,0.0,0.171484038384303,,0.171484038384303,Ex,"[M-H]-: 3-(3'-Methylthio)propylmalic acid | 2-(3'-Methylthio)propylmalic acid | IBMX | Apiole | cis-2,3-Dihydro-2,3-dihydroxy-4'-chlorobiphenyl | Sphagnum acid | 3-Deoxy-lyxo-heptulosaric acid | Dehydrovomifo"
+325.196,0.266404311548626,0.09814288053841,,-0.1682614310102159,,"[M-H]-: Pregna-4,16-diene-3,11,20-trione | Isoajmaline | Docebenone | (-)-Tortuosamine | Hydroquinidine | 3,3-Difluoro-17-methyl-5alpha-androstan-17beta-ol | 12alpha-Methylpregna-4,9(11)-diene-3,20-dione | 2,"
+184.022,0.24469654129785,0.089757037187231,,-0.154939504110619,,"[M-H]-: O-Phospho-L-serine | O-Phospho-D-serine | Cyometrinil | 2-Amino-3-carboxymuconate semialdehyde | (2Z,4E)-4-Amino-6-oxohepta-2,4-dienedioate | L-Serine O-sulfate"
+339.211,0.231939619854358,0.086475323540995,,-0.145464296313363,,"[M-H]-: 3-Hydroxyquinine | 17-Hydroxy-3-oxo-17alpha-pregna-1,4-diene-21-carboxylic acid, gamma-lactone | 5alpha,17alpha-Pregn-2-en-20-yn-17-ol acetate | 3alpha-Hydroxy-3,5-dihydromonacolin L acid | Methanthel"
+311.181,0.192614049462788,0.069866918298831,,-0.122747131163957,,"[M-H]-: (7S,8S)-DiHODE | 1-Dehydroprogesterone | Broussonin C | Ethisterone | Oseltamivir | 9(S)-HPODE | Centrolobine | 5S,8R-DiHODE | 9-Hydroxy-12-oxo-15(Z)-octadecenoic acid | Olanzapine | 17-Allylestra-1,3"
+870.327,0.0,0.112462908301132,,0.112462908301132,Ex,No matches in KEGG
+520.182,0.0,0.112113437235582,,0.112113437235582,Ex,No matches in KEGG
+730.52,0.111832523571569,0.0,,-0.111832523571569,Cont,No matches in KEGG
+533.336,0.055673910283782,0.15634906554264,,0.100675155258858,,[M-H]-: Divostroside | Divaricoside | Cucurbitacin H | Integerrenine | Neriifolin
+383.134,0.0,0.098052222772451,,0.098052222772451,Ex,"[M-H]-: Macrozamin | 4'-Demethyldeoxypodophyllotoxin | S-Adenosyl-L-homocysteine | Acetyl-maltose | 1,3,3'-Tri-O-methyl-4alpha-mannobiose | Schizandrin C"
+351.16,0.093515366239282,0.0,,-0.093515366239282,Cont,"[M-H]-: 2,2-Dimethyl-3-(4-methoxyphenyl)-4-ethyl-2H-1-benzopyran-7-ol acetate | Dibenzo[h,rst]pentaphene | Ajmalicine | 8-(1,1-Dimethylallyl)-3-methylgalangin | (3R)-3-Hydroxy-1,2-didehydro-2,3-dihydrotaberso"
+185.014,0.090620996872512,0.0,,-0.090620996872512,Cont,"[M-H]-: 3-Carboxy-2-hydroxymuconate semialdehyde | 3,5-Dihydroxybiphenyl | Glyphosate-monoammonium | Maleylpyruvate | Biphenyl-2,3-diol | 3-Carboxy-2,5-dihydro-5-oxofuran-2-acetate | 4-Sulfobenzaldehyde | Maf"
+972.523,0.0,0.08763145376064,,0.08763145376064,Ex,No matches in KEGG
+161.047,0.0,0.087008059767838,,0.087008059767838,Ex,"[M-H]-: Lichenin | Methyl cinnamate | (R)-2-Ethylmalate | 2-Deoxystreptamine | 4-Hydroxycoumarin | 1-Ethyl-2-benzimidazolinone | cis-1,2-Dihydronaphthalene-1,2-diol | D-Fucono-1,4-lactone | (4R)-4-Hydroxy-2-o"
+707.256999999999,0.0,0.083705387605816,,0.083705387605816,Ex,[M-H]-: 4'-Cinnamoylmussatioside | Sanggenon C | Jasplakinolide | Sanggenon D | Pradimicin B
+197.032,0.083509711370902,0.0,,-0.083509711370902,Cont,"[M-H]-: 3-Methoxy-4-hydroxymandelate | 2,4-Dinitrophenylhydrazine | 10-Carboxychrysanthemic acid | Dehydrosafynol | 2-Oxopropyl-CoM | (3E)-3-[(1R,5R,6S)-5-Hydroxy-7-oxabicyclo[4.1.0]heptan-2-ylidene]-2-oxopro"
+539.325,0.0,0.076714016665432,,0.076714016665432,Ex,[M-H]-: 1-Tuberculosinyladenosine | Condurangogenin C
+129.021,0.0,0.074990544297529,,0.074990544297529,Ex,"[M-H]-: 2,5-Dioxopentanoate | Cucurbitine | Acetylpyruvate | Ureidoacrylate | 2-Hydroxyethyl methacrylate | (S)-Piperazine-2-carboxylate | (3S)-1,2-Diazinane-3-carboxylate | (3R)-3-Methyl-2-oxopentanoic acid "
+455.338,0.0,0.074025477756678,,0.074025477756678,Ex,"[M-H]-: Soyasapogenol E | 30-Hydroxy-11-oxo-beta-amyrin | Ursolic acid | 4alpha-Carboxy-stigmasta-7,24(24(1))-dien-3beta-ol | Betulinic acid | 11-Carbonyl-20beta-hydroxycucurbitadienol | alpha-Elemolic acid |"
+187.042,0.070221924732548,0.0,,-0.070221924732548,Cont,[M-H]-: Tabtoxinine-delta-lactam | Butylidenephthalide | 4-Chlorobiphenyl | (3S)-3-Hydroxy-L-enduracididine | 2-Methyl-trans-aconitate | Antipyrine | 2-Oxosuberate | 1-Hydroxy-2-naphthoate | Plumbagin | Pegan
+225.064,0.069448708035683,0.0,,-0.069448708035683,Cont,"[M-H]-: Butopyronoxyl | Isochorismate | Deoxylapachol | 4-Dihydroxyethyl-8,9-epoxy-enediyne | Pinosylvin methyl ether | 12-Hydroxyjasmonate | 5-Acetylamino-6-formylamino-3-methyluracil | 4,4'-Dihydroxy-alpha-"
+426.986,0.0,0.06853337180602,,0.06853337180602,Ex,[M-H]-: Ticarcillin disodium | IDP | dXDP
+896.588999999999,0.0,0.067826631157417,,0.067826631157417,Ex,No matches in KEGG
+406.976,0.0,0.066572044654311,,0.066572044654311,Ex,[M-H]-: MM 4550
+682.243,0.0,0.065333542593553,,0.065333542593553,Ex,[M-H]-: 27-O-Demethylrifamycin SV
+159.033,0.0,0.064768150074671,,0.064768150074671,Ex,"[M-H]-: Hydralazine | 3-Oxo-3-ureidoisobutyrate | 6-Chlorobenzene-1,2,4-triol | N(alpha)-Acetyl-L-2,4-diaminobutyrate | 5-Fluoromuconolactone | 2-Propylsuccinic acid | 2,3-Dihydroxynaphthalene | 2-Oxoadipate "
+531.321,0.0,0.063793822794287,,0.063793822794287,Ex,[M-H]-: 5beta-Cyprinolsulfate | dl-alpha-Tocopheryl sodium phosphate | Cucurbitacin J | Simplexin | Triamcinolone hexacetonide
+297.164,0.062990617534708,0.0,,-0.062990617534708,Cont,"[M-H]-: 3-Hydroxy-19-norpregna-1,3,5(10)-trien-20-one | Sesamex | Doisynoestrol | Fumigaclavine A | Norethindrone | 3-Methoxy-5,10-seco-5,19-cycloandrosta-1(10),2,4-trien-17-one | Plakortic acid | Ostruthin |"
+194.027,0.062335114424531,0.0,,-0.062335114424531,Cont,"[M-H]-: Pyridarone | Dopaquinone | 6-(Hydroxymethyl)-7,8-dihydropterin | 2-Hydroxylaminobenzoylacetate | 1,2-Epoxy-3-(p-Nitrophenoxy)propane | 2-Amino-2-deoxy-D-gluconate | Acridone | 6-Hydroxy-3-succinoylpyr"
+883.575,0.0,0.060831848365626,,0.060831848365626,Ex,No matches in KEGG
+530.283,0.0,0.06063688542808,,0.06063688542808,Ex,[M-H]-: Harringtonine
+519.348,0.054360595953884,0.114003115507742,,0.059642519553858,,[M-H]-: Cucurbitacin P | 1-Linoleoylglycerophosphocholine
+239.081,0.058180517247349,0.0,,-0.058180517247349,Cont,"[M-H]-: Chrysophanic acid 9-anthrone | Prolyl-2-naphthylamide | Tetramisole hydrochloride | Dinoterb | Anthrafravic acid | 2'-Hydroxy-beta-oxodihydrochalcone | Methoxyphenone | 2,5-Dimethoxystilbene | Dihydro"
+437.326,0.0,0.057735349510058,,0.057735349510058,Ex,[M-H]-: Demethylphylloquinol
+326.198,0.056684862263563,0.0,,-0.056684862263563,Cont,"[M-H]-: Sethoxydim | Butorphanol | 17-Methylandrosta-2,4-dieno[2,3-d]isoxazol-17beta-ol | 1-Butyl-3-(1-naphthoyl)indole"
+534.34,0.0,0.056502696337426,,0.056502696337426,Ex,No matches in KEGG
+871.327,0.0,0.054935681726904,,0.054935681726904,Ex,No matches in KEGG
+198.036,0.054725277261659,0.0,,-0.054725277261659,Cont,"[M-H]-: Isodictamnine | L-Threonine O-3-phosphate | Isowillardiine | 2-Amino-5-hydroxyl-4-hydroxylamino-6-nitrotoluene | 2,4-Dihydroxylamino-6-nitrotoluene | Isoclavulanic acid | Dictamnine | 4-Nitrobiphenyl "
+341.119,0.054300585105769,0.0,,-0.054300585105769,Cont,"[M-H]-: beta-Maltose | Nigerose | beta-1,2-Mannobiose | 4',5,6,7-Tetramethoxyflavone | Magnoflorine | Deoxymiroestrol | alpha-Cellobiose | Epimelibiose | Melibiulose | Coniferin | Mannobiose | alpha,alpha-Tre"
+843.307,0.0,0.053669884854889,,0.053669884854889,Ex,[M-H]-: Urdamycin A
+340.217,0.053317330440503,0.0,,-0.053317330440503,Cont,[M-H]-: Propafenone | Acetylintermedine | 4-Methylajmaline | 1-Pentyl-3-(1-naphthoyl)indole | Acetyllycopsamine | Lindheimerine | Pregnenolone carbonitrile
+515.122,0.052227902736264,0.0,,-0.052227902736264,Cont,"[M-H]-: Rottlerin | 1,3-Dicaffeoylquinic acid | Formononetin 7-O-(6-O-malonyl-beta-D-glucoside) | 3,5-Dicaffeoylquinate | Isochlorogenic acid b | Carindacillin sodium | dTDP-beta-L-rhodinose | Dexamethasone s"
+170.006,0.051618561816944,0.0,,-0.051618561816944,Cont,"[M-H]-: Dichlobenil | Nitrogen mustard N-oxide | Crimidine | 2-Formyloxymethylclavam | 4-Toluenesulfonamide | Calcium L-aspartate | Cetoniacytone B | 5-Amino-5-deoxy-3-dehydroshikimate | 2,3,4,5-Tetrahydrodip"
+882.575,0.069079410508823,0.1203730420847,,0.0512936315758769,,No matches in KEGG
