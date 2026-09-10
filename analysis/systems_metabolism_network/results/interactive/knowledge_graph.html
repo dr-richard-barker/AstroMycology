@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Knowledge Graph</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.23.0/cytoscape.min.js"></script>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 0; }
+        #cy { width: 100vw; height: 100vh; display: block; }
+        .legend { position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; border: 1px solid #ccc; }
+        .legend h3 { margin-top: 0; font-size: 16px; margin-bottom: 10px; }
+        .legend-item { margin-bottom: 6px; font-size: 12px; display: flex; align-items: center; }
+        .color-box { display: inline-block; width: 14px; height: 14px; margin-right: 8px; border: 1px solid #999; }
+        .edge-line { display: inline-block; width: 20px; height: 3px; margin-right: 8px; }
+    </style>
+</head>
+<body>
+    <div class="legend">
+        <h3>Knowledge Graph Legend</h3>
+        <strong>Nodes</strong>
+        <div class="legend-item"><span class="color-box" style="background:#ff9999; border-radius:50%;"></span>Enzyme (Colored by LogFC)</div>
+        <div class="legend-item"><span class="color-box" style="background:#d3d3d3; border-radius:2px;"></span>Metabolite/Cofactor</div>
+        <div class="legend-item"><span class="color-box" style="background:#90EE90; transform: rotate(45deg); margin: 0 10px 0 3px;"></span>Biological Process</div>
+        <div class="legend-item"><span class="color-box" style="background:#E6E6FA; clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); margin-left: 2px;"></span>Cellular Compartment</div>
+        <br>
+        <strong>Edges</strong>
+        <div class="legend-item"><span class="edge-line" style="background:#ff7f0e;"></span>Consumes (Substrate)</div>
+        <div class="legend-item"><span class="edge-line" style="background:#2ca02c;"></span>Produces (Product)</div>
+        <div class="legend-item"><span class="edge-line" style="background:transparent; border-top: 3px dashed #1f77b4; height: 0;"></span>Drives Process</div>
+        <div class="legend-item"><span class="edge-line" style="background:transparent; border-top: 3px dotted #9467bd; height: 0;"></span>Localized In</div>
+    </div>
+    <div id="cy"></div>
+    <script>
+        var cy = cytoscape({
+            container: document.getElementById('cy'),
+            elements: {
+                nodes: [{"data": {"id": "Alcohol oxidase\n(1.1.3.13)", "label": "Alcohol oxidase\n(1.1.3.13)", "color": "#ee8468", "shape": "ellipse", "group": "enzyme"}}, {"data": {"id": "Aldehyde dehydrogenase\n(1.2.1.3)", "label": "Aldehyde dehydrogenase\n(1.2.1.3)", "color": "#ea7b60", "shape": "ellipse", "group": "enzyme"}}, {"data": {"id": "Mannitol 2-dehydrogenase\n(1.1.1.138)", "label": "Mannitol 2-dehydrogenase\n(1.1.1.138)", "color": "#f5c1a9", "shape": "ellipse", "group": "enzyme"}}, {"data": {"id": "Sorbitol 2-dehydrogenase\n(1.1.1.14)", "label": "Sorbitol 2-dehydrogenase\n(1.1.1.14)", "color": "#f5c1a9", "shape": "ellipse", "group": "enzyme"}}, {"data": {"id": "Rhodanese\n(2.8.1.1)", "label": "Rhodanese\n(2.8.1.1)", "color": "#e97a5f", "shape": "ellipse", "group": "enzyme"}}, {"data": {"id": "Linoleate 8R-dioxygenase\n(1.13.11.60)", "label": "Linoleate 8R-dioxygenase\n(1.13.11.60)", "color": "#c12b30", "shape": "ellipse", "group": "enzyme"}}, {"data": {"id": "Primary Alcohol", "label": "Primary Alcohol", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "O2", "label": "O2", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "Aldehyde", "label": "Aldehyde", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "H2O2", "label": "H2O2", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "NAD+", "label": "NAD+", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "NADH", "label": "NADH", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "H2O", "label": "H2O", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "Carboxylate", "label": "Carboxylate", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "H+", "label": "H+", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "D-Mannitol", "label": "D-Mannitol", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "NADP+", "label": "NADP+", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "D-Fructose", "label": "D-Fructose", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "NADPH", "label": "NADPH", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "D-Sorbitol", "label": "D-Sorbitol", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "L-Sorbose", "label": "L-Sorbose", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "Thiosulfate", "label": "Thiosulfate", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "Cyanide", "label": "Cyanide", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "Sulfite", "label": "Sulfite", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "Thiocyanate", "label": "Thiocyanate", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "Linoleate", "label": "Linoleate", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "8-HPODE", "label": "8-HPODE", "color": "#d3d3d3", "shape": "rectangle", "group": "metabolite"}}, {"data": {"id": "Oxidative 1C Metabolism", "label": "Oxidative 1C Metabolism", "color": "#90EE90", "shape": "diamond", "group": "process"}}, {"data": {"id": "Lignin Degradation", "label": "Lignin Degradation", "color": "#90EE90", "shape": "diamond", "group": "process"}}, {"data": {"id": "Cyanide Detoxification", "label": "Cyanide Detoxification", "color": "#90EE90", "shape": "diamond", "group": "process"}}, {"data": {"id": "Oxylipin Synthesis", "label": "Oxylipin Synthesis", "color": "#90EE90", "shape": "diamond", "group": "process"}}, {"data": {"id": "Osmotic Regulation", "label": "Osmotic Regulation", "color": "#90EE90", "shape": "diamond", "group": "process"}}, {"data": {"id": "Polyol Metabolism", "label": "Polyol Metabolism", "color": "#90EE90", "shape": "diamond", "group": "process"}}, {"data": {"id": "Extracellular Space", "label": "Extracellular Space", "color": "#E6E6FA", "shape": "hexagon", "group": "compartment"}}, {"data": {"id": "Cytoplasm", "label": "Cytoplasm", "color": "#E6E6FA", "shape": "hexagon", "group": "compartment"}}, {"data": {"id": "Mitochondria", "label": "Mitochondria", "color": "#E6E6FA", "shape": "hexagon", "group": "compartment"}}],
+                edges: [{"data": {"source": "Alcohol oxidase\n(1.1.3.13)", "target": "Aldehyde", "color": "#2ca02c", "style": "solid", "relation": "produces"}}, {"data": {"source": "Alcohol oxidase\n(1.1.3.13)", "target": "H2O2", "color": "#2ca02c", "style": "solid", "relation": "produces"}}, {"data": {"source": "Alcohol oxidase\n(1.1.3.13)", "target": "Oxidative 1C Metabolism", "color": "#1f77b4", "style": "dashed", "relation": "drives_process"}}, {"data": {"source": "Alcohol oxidase\n(1.1.3.13)", "target": "Lignin Degradation", "color": "#1f77b4", "style": "dashed", "relation": "drives_process"}}, {"data": {"source": "Alcohol oxidase\n(1.1.3.13)", "target": "Extracellular Space", "color": "#9467bd", "style": "dotted", "relation": "localized_in"}}, {"data": {"source": "Aldehyde dehydrogenase\n(1.2.1.3)", "target": "Carboxylate", "color": "#2ca02c", "style": "solid", "relation": "produces"}}, {"data": {"source": "Aldehyde dehydrogenase\n(1.2.1.3)", "target": "NADH", "color": "#2ca02c", "style": "solid", "relation": "produces"}}, {"data": {"source": "Aldehyde dehydrogenase\n(1.2.1.3)", "target": "H+", "color": "#2ca02c", "style": "solid", "relation": "produces"}}, {"data": {"source": "Aldehyde dehydrogenase\n(1.2.1.3)", "target": "Oxidative 1C Metabolism", "color": "#1f77b4", "style": "dashed", "relation": "drives_process"}}, {"data": {"source": "Aldehyde dehydrogenase\n(1.2.1.3)", "target": "Cytoplasm", "color": "#9467bd", "style": "dotted", "relation": "localized_in"}}, {"data": {"source": "Mannitol 2-dehydrogenase\n(1.1.1.138)", "target": "D-Mannitol", "color": "#2ca02c", "style": "solid", "relation": "produces"}}, {"data": {"source": "Mannitol 2-dehydrogenase\n(1.1.1.138)", "target": "NADP+", "color": "#2ca02c", "style": "solid", "relation": "produces"}}, {"data": {"source": "Mannitol 2-dehydrogenase\n(1.1.1.138)", "target": "Osmotic Regulation", "color": "#1f77b4", "style": "dashed", "relation": "drives_process"}}, {"data": {"source": "Mannitol 2-dehydrogenase\n(1.1.1.138)", "target": "Polyol Metabolism", "color": "#1f77b4", "style": "dashed", "relation": "drives_process"}}, {"data": {"source": "Mannitol 2-dehydrogenase\n(1.1.1.138)", "target": "Cytoplasm", "color": "#9467bd", "style": "dotted", "relation": "localized_in"}}, {"data": {"source": "Sorbitol 2-dehydrogenase\n(1.1.1.14)", "target": "D-Sorbitol", "color": "#2ca02c", "style": "solid", "relation": "produces"}}, {"data": {"source": "Sorbitol 2-dehydrogenase\n(1.1.1.14)", "target": "NAD+", "color": "#2ca02c", "style": "solid", "relation": "produces"}}, {"data": {"source": "Sorbitol 2-dehydrogenase\n(1.1.1.14)", "target": "Osmotic Regulation", "color": "#1f77b4", "style": "dashed", "relation": "drives_process"}}, {"data": {"source": "Sorbitol 2-dehydrogenase\n(1.1.1.14)", "target": "Polyol Metabolism", "color": "#1f77b4", "style": "dashed", "relation": "drives_process"}}, {"data": {"source": "Sorbitol 2-dehydrogenase\n(1.1.1.14)", "target": "Cytoplasm", "color": "#9467bd", "style": "dotted", "relation": "localized_in"}}, {"data": {"source": "Rhodanese\n(2.8.1.1)", "target": "Sulfite", "color": "#2ca02c", "style": "solid", "relation": "produces"}}, {"data": {"source": "Rhodanese\n(2.8.1.1)", "target": "Thiocyanate", "color": "#2ca02c", "style": "solid", "relation": "produces"}}, {"data": {"source": "Rhodanese\n(2.8.1.1)", "target": "Cyanide Detoxification", "color": "#1f77b4", "style": "dashed", "relation": "drives_process"}}, {"data": {"source": "Rhodanese\n(2.8.1.1)", "target": "Mitochondria", "color": "#9467bd", "style": "dotted", "relation": "localized_in"}}, {"data": {"source": "Linoleate 8R-dioxygenase\n(1.13.11.60)", "target": "8-HPODE", "color": "#2ca02c", "style": "solid", "relation": "produces"}}, {"data": {"source": "Linoleate 8R-dioxygenase\n(1.13.11.60)", "target": "Oxylipin Synthesis", "color": "#1f77b4", "style": "dashed", "relation": "drives_process"}}, {"data": {"source": "Linoleate 8R-dioxygenase\n(1.13.11.60)", "target": "Extracellular Space", "color": "#9467bd", "style": "dotted", "relation": "localized_in"}}, {"data": {"source": "Primary Alcohol", "target": "Alcohol oxidase\n(1.1.3.13)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "O2", "target": "Alcohol oxidase\n(1.1.3.13)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "O2", "target": "Linoleate 8R-dioxygenase\n(1.13.11.60)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "Aldehyde", "target": "Aldehyde dehydrogenase\n(1.2.1.3)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "NAD+", "target": "Aldehyde dehydrogenase\n(1.2.1.3)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "NADH", "target": "Sorbitol 2-dehydrogenase\n(1.1.1.14)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "H2O", "target": "Aldehyde dehydrogenase\n(1.2.1.3)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "H+", "target": "Mannitol 2-dehydrogenase\n(1.1.1.138)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "H+", "target": "Sorbitol 2-dehydrogenase\n(1.1.1.14)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "D-Fructose", "target": "Mannitol 2-dehydrogenase\n(1.1.1.138)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "NADPH", "target": "Mannitol 2-dehydrogenase\n(1.1.1.138)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "L-Sorbose", "target": "Sorbitol 2-dehydrogenase\n(1.1.1.14)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "Thiosulfate", "target": "Rhodanese\n(2.8.1.1)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "Cyanide", "target": "Rhodanese\n(2.8.1.1)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}, {"data": {"source": "Linoleate", "target": "Linoleate 8R-dioxygenase\n(1.13.11.60)", "color": "#ff7f0e", "style": "solid", "relation": "consumes"}}]
+            },
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'background-color': 'data(color)',
+                        'label': 'data(label)',
+                        'shape': 'data(shape)',
+                        'font-size': '10px',
+                        'text-wrap': 'wrap',
+                        'text-max-width': '80px',
+                        'width': '60px',
+                        'height': '60px',
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'color': '#000',
+                        'border-width': 1,
+                        'border-color': '#666'
+                    }
+                },
+                {
+                    selector: 'node[group="metabolite"]',
+                    style: {
+                        'width': '40px',
+                        'height': '30px',
+                        'font-size': '8px'
+                    }
+                },
+                {
+                    selector: 'node[group="process"]',
+                    style: {
+                        'width': '70px',
+                        'height': '70px',
+                        'color': 'darkgreen',
+                        'font-weight': 'bold'
+                    }
+                },
+                {
+                    selector: 'node[group="compartment"]',
+                    style: {
+                        'width': '80px',
+                        'height': '70px',
+                        'color': 'indigo',
+                        'font-weight': 'bold'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 3,
+                        'line-color': 'data(color)',
+                        'line-style': 'data(style)',
+                        'target-arrow-color': 'data(color)',
+                        'target-arrow-shape': 'triangle',
+                        'curve-style': 'bezier',
+                        'label': 'data(relation)',
+                        'font-size': '8px',
+                        'text-rotation': 'autorotate',
+                        'text-margin-y': -10,
+                        'text-opacity': 0.8
+                    }
+                }
+            ],
+            layout: {
+                name: 'cose',
+                idealEdgeLength: 100,
+                nodeOverlap: 20,
+                refresh: 20,
+                fit: true,
+                padding: 30,
+                randomize: true,
+                componentSpacing: 100,
+                nodeRepulsion: 400000,
+                edgeElasticity: 100,
+                nestingFactor: 5,
+                gravity: 80,
+                numIter: 1000,
+                initialTemp: 200,
+                coolingFactor: 0.95,
+                minTemp: 1.0
+            }
+        });
+    </script>
+</body>
+</html>
+    
