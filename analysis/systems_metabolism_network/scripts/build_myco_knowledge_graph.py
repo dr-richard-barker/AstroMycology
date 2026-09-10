@@ -231,19 +231,25 @@ def generate_html():
             'data': {'source': u, 'target': v, 'color': style['color'], 'style': style['style'], 'relation': rel}
         })
 
-    html_content = f"""<!DOCTYPE html>
+    html_content = """<!DOCTYPE html>
 <html>
 <head>
     <title>Knowledge Graph</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.23.0/cytoscape.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-svg@0.4.0/cytoscape-svg.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body {{ font-family: sans-serif; margin: 0; padding: 0; }}
-        #cy {{ width: 100vw; height: 100vh; display: block; }}
-        .legend {{ position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; border: 1px solid #ccc; }}
-        .legend h3 {{ margin-top: 0; font-size: 16px; margin-bottom: 10px; }}
-        .legend-item {{ margin-bottom: 6px; font-size: 12px; display: flex; align-items: center; }}
-        .color-box {{ display: inline-block; width: 14px; height: 14px; margin-right: 8px; border: 1px solid #999; }}
-        .edge-line {{ display: inline-block; width: 20px; height: 3px; margin-right: 8px; }}
+        body { font-family: sans-serif; margin: 0; padding: 0; }
+        #cy { width: 100vw; height: 100vh; display: block; }}
+        .legend {{ position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; border: 1px solid #ccc; }
+        .legend h3 { margin-top: 0; font-size: 16px; margin-bottom: 10px; }
+        .legend-item { margin-bottom: 6px; font-size: 12px; display: flex; align-items: center; }
+        .color-box { display: inline-block; width: 14px; height: 14px; margin-right: 8px; border: 1px solid #999; }
+        .edge-line { display: inline-block; width: 20px; height: 3px; margin-right: 8px; }
+            .export-panel { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.95); padding: 12px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; border: 1px solid #ccc; text-align: center; }
+        .export-panel strong { font-size: 14px; margin-bottom: 8px; display: block; }
+        .export-panel button { cursor: pointer; padding: 6px 12px; font-size: 12px; border: 1px solid #999; background: #eee; border-radius: 4px; display: block; width: 100%; margin-bottom: 6px; font-weight: bold; color: #333; }
+        .export-panel button:hover { background: #ddd; }
     </style>
 </head>
 <body>
@@ -261,18 +267,24 @@ def generate_html():
         <div class="legend-item"><span class="edge-line" style="background:transparent; border-top: 3px dashed #1f77b4; height: 0;"></span>Drives Process</div>
         <div class="legend-item"><span class="edge-line" style="background:transparent; border-top: 3px dotted #9467bd; height: 0;"></span>Localized In</div>
     </div>
+    <div class="export-panel">
+        <strong>Export Graph</strong>
+        <button onclick="exportPNG()">PNG</button>
+        <button onclick="exportSVG()">SVG</button>
+        <button onclick="exportPDF()">PDF</button>
+    </div>
     <div id="cy"></div>
     <script>
-        var cy = cytoscape({{
+        var cy = cytoscape({
             container: document.getElementById('cy'),
-            elements: {{
-                nodes: {json.dumps(nodes_json)},
-                edges: {json.dumps(edges_json)}
-            }},
+            elements: {
+                nodes: $$NODES$$,
+                edges: $$EDGES$$
+            },
             style: [
-                {{
+                {
                     selector: 'node',
-                    style: {{
+                    style: {
                         'background-color': 'data(color)',
                         'label': 'data(label)',
                         'shape': 'data(shape)',
@@ -286,37 +298,37 @@ def generate_html():
                         'color': '#000',
                         'border-width': 1,
                         'border-color': '#666'
-                    }}
-                }},
-                {{
+                    }
+                },
+                {
                     selector: 'node[group="metabolite"]',
-                    style: {{
+                    style: {
                         'width': '65px',
                         'height': '45px',
                         'font-size': '12px'
-                    }}
-                }},
-                {{
+                    }
+                },
+                {
                     selector: 'node[group="process"]',
-                    style: {{
+                    style: {
                         'width': '100px',
                         'height': '100px',
                         'color': 'darkgreen',
                         'font-weight': 'bold'
-                    }}
-                }},
-                {{
+                    }
+                },
+                {
                     selector: 'node[group="compartment"]',
-                    style: {{
+                    style: {
                         'width': '120px',
                         'height': '100px',
                         'color': 'indigo',
                         'font-weight': 'bold'
-                    }}
-                }},
-                {{
+                    }
+                },
+                {
                     selector: 'edge',
-                    style: {{
+                    style: {
                         'width': 3,
                         'line-color': 'data(color)',
                         'line-style': 'data(style)',
@@ -328,10 +340,10 @@ def generate_html():
                         'text-rotation': 'autorotate',
                         'text-margin-y': -10,
                         'text-opacity': 0.8
-                    }}
-                }}
+                    }
+                }
             ],
-            layout: {{
+            layout: {
                 name: 'cose',
                 idealEdgeLength: 150,
                 nodeOverlap: 20,
@@ -348,12 +360,14 @@ def generate_html():
                 initialTemp: 200,
                 coolingFactor: 0.95,
                 minTemp: 1.0
-            }}
-        }});
+            }
+        });
     </script>
 </body>
 </html>
     """
+    html_content = html_content.replace("$$NODES$$", json.dumps(nodes_json))
+    html_content = html_content.replace("$$EDGES$$", json.dumps(edges_json))
     with open(OUT_HTML, 'w') as f:
         f.write(html_content)
 
