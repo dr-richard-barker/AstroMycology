@@ -17,6 +17,7 @@ import { MetadataReview } from './components/MetadataReview';
 import { Datasets } from './components/Datasets';
 import { RnaSeq } from './components/RnaSeq';
 import { BgcAtlas } from './components/BgcAtlas';
+import { DESIDashboard } from './components/DESIDashboard';
 import { Admin } from './components/Admin';
 import { AuthGate } from './components/AuthGate';
 import { MetadataEditor } from './components/MetadataEditor';
@@ -29,6 +30,7 @@ type Tab = string;
 const NAV: { id: Tab; label: string; sub: string; icon: React.ComponentType<any> }[] = [
   { id: 'database', label: 'Database', sub: 'Browse & analyze', icon: DbIcon },
   { id: 'dashboard', label: 'Dashboard', sub: 'Metadata analytics', icon: BarChart3 },
+  { id: 'desi-ms', label: 'DESI-MS Analysis', sub: 'Metabolomics insights', icon: FlaskConical },
   { id: 'rnaseq', label: 'RNA-seq', sub: 'Tissue expression atlas', icon: Dna },
   { id: 'bgc-atlas', label: 'BGC Atlas', sub: 'Fungal biosynthesis explorer', icon: FlaskConical },
   { id: 'datasets', label: 'Datasets', sub: 'Provenance & citations', icon: Library },
@@ -242,6 +244,8 @@ function AppInner({ auth }: { auth: AuthState }) {
               currentUserId={currentUserId} onDeleteUpload={onDeleteUpload} />
           ) : tab === 'dashboard' ? (
             <Dashboard />
+          ) : tab === 'desi-ms' ? (
+            <DESIDashboard />
           ) : tab === 'rnaseq' ? (
             <RnaSeq />
           ) : tab === 'bgc-atlas' ? (
